@@ -1,0 +1,9 @@
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example
+  namespace: default
+spec:
+  domains:
+    - 'venkatamutyala.com'
+    - 'yolo.venkatamutyala.com'

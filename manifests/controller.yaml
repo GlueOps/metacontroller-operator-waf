@@ -1,0 +1,22 @@
+apiVersion: metacontroller.k8s.io/v1alpha1
+kind: CompositeController
+metadata:
+  name: glueops-waf-controller
+spec:
+  generateSelector: true
+  parentResource:
+    apiVersion: metacontroller.glueops.dev/v1alpha1
+    resource: webapplicationfirewalls
+  childResources:
+    - apiVersion: v1
+      resource: configmaps
+      updateStrategy:
+        method: InPlace
+  resyncPeriodSeconds: 30
+  hooks:
+    sync:
+      webhook:
+        url: https://verbose-space-adventure-xqwgrgr7g4frgj-8080.app.github.dev
+    finalize:
+      webhook:
+        url: https://verbose-space-adventure-xqwgrgr7g4frgj-8080.app.github.dev/finalize
