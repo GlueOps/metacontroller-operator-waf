@@ -1,55 +1,82 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 from tools import *
+from json_log_formatter import JsonFormatter
+import logging
 
+
+# configure logging
+json_formatter = JsonFormatter()
+
+handler = logging.StreamHandler()
+handler.setFormatter(json_formatter)
+
+logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
 
 
 class Controller(BaseHTTPRequestHandler):
-  def sync(self, parent, children):
-    # Compute status based on observed state.
-    # desired_status = {
-    #   "pods": len(children["Pod.v1"])
-    # }
-    print("Yolo")
-    status_dict = {"status": {}}
-    domains = parent.get("spec", {}).get("domains")
-    arn = create_acm_certificate(domains)
-    certificate_status = check_certificate_validation(arn)
-    status_dict["status"]["certificate_request"] = certificate_status
-    
-    if "status" in check_certificate_validation(arn):
-        if check_certificate_validation(arn).get("status") == "ISSUED":
-          print('make cdn and waf please')
-    
-    
-    existing_conditions = [
-        {"type": "Ready", "status": "True", "lastTransitionTime": "2023-10-02T17:30:00Z"},
-        {"type": "Initialized", "status": "True", "lastTransitionTime": "2023-10-02T17:20:00Z"}
-    ]
+    def sync(self, parent, children):
+        # Compute status based on observed state.
+        # desired_status = {
+        #   "pods": len(children["Pod.v1"])
+        # }
+        logger.info("Starting")
+        domains = parent.get("spec", {}).get("domains")
+        status_dict = parent.get("status", {})
+        acm_arn = status_dict.get("certificate_request", {}).get("arn", None)
+        distribution_id = status_dict.get(
+            "distribution_request", {}).get("distribution_id", None)
+          
+        if self.path.endswith('/sync'):
+          if acm_arn is not None:
+              if need_new_certificate(acm_arn, domains):
+                  logger.info("Requesting a new certificate")
+                  acm_arn = create_acm_certificate(domains)
+              certificate_status = check_certificate_validation(acm_arn)
+              status_dict["certificate_request"] = certificate_status
+          elif acm_arn is None:
+              acm_arn = create_acm_certificate(domains)
+              certificate_status = check_certificate_validation(acm_arn)
+              status_dict["certificate_request"] = certificate_status
 
-    new_conditions = [
-        {"type": "Ready", "status": "False"},  # Here the status changed, so this condition should get a new lastTransitionTime
-        {"type": "Initialized", "status": "True"},  # Here the status is same, so this condition should retain the old lastTransitionTime
-        {"type": "Available", "status": "True"}  # This is a new condition, so it should get a new lastTransitionTime
-    ]
+          if status_dict["certificate_request"]["status"] == "ISSUED":
+              if distribution_id is None:
+                  status_dict["distribution_request"] = create_distribution(
+                      "yahoo.com", acm_arn, None, domains)
+              if distribution_id is not None:
+                  status_dict["distribution_request"] = get_live_distribution_status(distribution_id)
+                  if status_dict["distribution_request"]["status"] != "InProgress":
+                      update_distribution(
+                          distribution_id, "yahoo.com", acm_arn, None, domains)
+                  else:
+                      logger.info(
+                          f"There are updates in progress for DISTRIBUTION ID: {distribution_id} so we are going to skip any updates now")
+        
+        if self.path.endswith('/finalize'):
+          logger.info(f"Deleting Distribution ID: {distribution_id} and ACM CERT: {acm_arn}")
+          if distribution_id is not None:
+                if delete_distribution(distribution_id, acm_arn):
+                    status_dict["distribution_request"] = {}
+          if acm_arn is not None and distribution_id is None:
+            delete_acm_certificate(acm_arn)
+            logger.info(f"Successfully Deleted Distribution ID: {distribution_id} and ACM CERT: {acm_arn}")
+            return { "finalized": True}
+          
+        
+        return {"status": status_dict}
+        
 
-    updated_conditions = update_conditions(existing_conditions, new_conditions)
-    status_payload = { "status":{
-        "conditions": "updated_conditions"
-    }}
+    def do_POST(self):
+        # Serve the sync() function as a JSON webhook.
+        observed = json.loads(self.rfile.read(
+            int(self.headers.get("content-length"))))
+        desired = self.sync(observed["parent"], observed["children"])
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(desired).encode())
 
-    return status_dict
-    #return { "finalized": True}
-#{"status": desired_status, "children": desired_pods}
 
-  def do_POST(self):
-    # Serve the sync() function as a JSON webhook.
-    observed = json.loads(self.rfile.read(int(self.headers.get("content-length"))))
-    desired = self.sync(observed["parent"], observed["children"])
-    print(desired)
-    self.send_response(200)
-    self.send_header("Content-type", "application/json")
-    self.end_headers()
-    self.wfile.write(json.dumps(desired).encode())
-
-HTTPServer(("", 8081), Controller).serve_forever()
+HTTPServer(("", 8080), Controller).serve_forever()
