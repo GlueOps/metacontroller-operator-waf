@@ -55,8 +55,6 @@ class Controller(BaseHTTPRequestHandler):
                             f"There are updates in progress for DISTRIBUTION ID: {distribution_id} so we are going to skip any updates now")
 
         if self.path.endswith('/finalize'):
-            logger.info(
-                f"Deleting Distribution ID: {distribution_id} and ACM CERT: {acm_arn}")
             if distribution_id is not None:
                 if delete_distribution(distribution_id, acm_arn):
                     status_dict["distribution_request"] = {}
