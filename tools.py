@@ -160,7 +160,7 @@ def get_live_distribution_status(distribution_id):
 
 
 def parse_distribution_state(distribution_details):
-    logger.info(f"Parsing distribution_state: {state}")
+    logger.info(f"Parsing distribution_state: {distribution_details}")
     state = {
         "status": distribution_details.get('Distribution', {}).get('Status', None),
         "arn": distribution_details.get('Distribution', {}).get('ARN', None),
@@ -169,6 +169,7 @@ def parse_distribution_state(distribution_details):
         "cloudfront_url": distribution_details.get('Distribution', {}).get('DomainName', None),
         "last_modified_time": str(distribution_details.get('Distribution', {}).get('LastModifiedTime', None))
     }
+    logger.info(f"Parsed distribution details: {state}")
 
     return state
 
