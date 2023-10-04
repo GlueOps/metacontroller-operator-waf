@@ -13,13 +13,13 @@ def create_aws_client(service):
 
 
 def create_acm_certificate(domains):
+    logging.info(f"Creating ACM certificate for: {domains}")
     if not domains:
         raise ValueError("At least one domain is required")
 
     main_domain = domains[0]
 
-    alternative_names = domains[1:]    
-    
+    alternative_names = domains[1:]
 
     # change the region as needed
     acm = create_aws_client('acm')
@@ -29,16 +29,20 @@ def create_acm_certificate(domains):
             response = acm.request_certificate(
                 DomainName=main_domain,
                 ValidationMethod='DNS',  # this example is for DNS validation
-                IdempotencyToken='glueops'  # this should be a unique string value. This can be anything as long as it's the same per unique request. But probably just best to leave it hardcoded to glueops. If the same certificate gets requested in the same hour it'll help avoid duplicates
+                # this should be a unique string value. This can be anything as long as it's the same per unique request. But probably just best to leave it hardcoded to glueops. If the same certificate gets requested in the same hour it'll help avoid duplicates
+                IdempotencyToken=str(int(time.time()))
             )
         else:
             response = acm.request_certificate(
                 DomainName=main_domain,
                 ValidationMethod='DNS',  # this example is for DNS validation
                 SubjectAlternativeNames=alternative_names,
-                IdempotencyToken='glueops'  # this should be a unique string value. This can be anything as long as it's the same per unique request. But probably just best to leave it hardcoded to glueops. If the same certificate gets requested in the same hour it'll help avoid duplicates
+                # this should be a unique string value. This can be anything as long as it's the same per unique request. But probably just best to leave it hardcoded to glueops. If the same certificate gets requested in the same hour it'll help avoid duplicates
+                IdempotencyToken=str(int(time.time()))
             )
         certificate_arn = response['CertificateArn']
+        logging.info(
+            f"Created ACM certificate for: {domains} and got ARN: {certificate_arn}")
 
         return certificate_arn
 
@@ -48,22 +52,26 @@ def create_acm_certificate(domains):
 
 
 def check_certificate_validation(certificate_arn):
+    logger.info(f"Checking on ACM Certificate: {certificate_arn}")
     acm = create_aws_client('acm')
     cert_details = acm.describe_certificate(CertificateArn=certificate_arn)
-    logger.info(f"Checking on ACM Certificate: {cert_details}")
 
     return {
         "arn": certificate_arn,
-        "status": cert_details['Certificate']['Status'],
-        "validations": cert_details['Certificate']['DomainValidationOptions']
+        "status": cert_details.get('Certificate', {}).get('Status', None),
+        "validations": cert_details.get('Certificate', {}).get('DomainValidationOptions', None)
     }
-    
+
+
 def delete_acm_certificate(certificate_arn):
+    logger.info(f"Deleting ACM Certificate {certificate_arn}")
     acm = create_aws_client('acm')
     acm.delete_certificate(CertificateArn=certificate_arn)
 
 
 def get_domains_from_existing_certificate(certificate_arn):
+    logger.info(
+        f"Get domains from existing ACM certificate: {certificate_arn}")
     acm = create_aws_client('acm')
     response = acm.describe_certificate(
         CertificateArn=certificate_arn
@@ -114,6 +122,7 @@ def update_conditions(existing_conditions, new_conditions):
 
 
 def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, domains):
+    logger.info(f"Creating distribution for: {domains}")
     cdn = create_aws_client('cloudfront')
     response = cdn.create_distribution(DistributionConfig=create_distribution_config(
         domains, origin_domain_name, acm_certificate_arn))
@@ -137,46 +146,57 @@ def update_distribution(distribution_id, origin_domain_name, acm_certificate_arn
             config['Aliases']['Items'] = []
         differences = DeepDiff(config, config_to_deploy, ignore_order=True)
         if differences:
-            logger.info(f"We have distribution updates: {differences}")
+            logger.info(
+                f"Updating Distribution ID: {distribution_id} because of: {differences}")
             cdn.update_distribution(
                 DistributionConfig=config_to_deploy, Id=distribution_id, IfMatch=etag)
 
 
 def get_live_distribution_status(distribution_id):
+    logger.info(f"Getting Distribution status: {distribution_id}")
     client = create_aws_client('cloudfront')
     response = client.get_distribution(Id=distribution_id)
     return parse_distribution_state(response)
 
 
 def parse_distribution_state(distribution_details):
+    logger.info(f"Parsing distribution_state: {state}")
     state = {
-        "status": distribution_details['Distribution']['Status'],
-        "arn": distribution_details['Distribution']['ARN'],
-        "distribution_id": distribution_details['Distribution']['Id'],
-        "distribution_enabled": distribution_details['Distribution']['DistributionConfig']['Enabled'],
-        "cloudfront_url": distribution_details['Distribution']['DomainName'],
-        "last_modified_time": str(distribution_details['Distribution']['LastModifiedTime'])
+        "status": distribution_details.get('Distribution', {}).get('Status', None),
+        "arn": distribution_details.get('Distribution', {}).get('ARN', None),
+        "distribution_id": distribution_details.get('Distribution', {}).get('Id', None),
+        "distribution_enabled": distribution_details.get('Distribution', {}).get('DistributionConfig', {}).get('Enabled', None),
+        "cloudfront_url": distribution_details.get('Distribution', {}).get('DomainName', None),
+        "last_modified_time": str(distribution_details.get('Distribution', {}).get('LastModifiedTime', None))
     }
 
     return state
 
 
 def get_live_distribution_config(distribution_id):
+    logger.info(
+        f"Getting current status of Distribution ID: {distribution_id}")
     client = create_aws_client('cloudfront')
     response = client.get_distribution_config(Id=distribution_id)
     return response
 
 
 def disable_distribution(distribution_id, acm_arn):
+    logger.info(f"Disabling Distribution ID: {distribution_id}")
     client = create_aws_client('cloudfront')
     config = get_live_distribution_config(distribution_id)
     etag = config['ETag']
-    config = create_distribution_config([], "glueops.dev", acm_arn, None, caller_reference=config['DistributionConfig']['CallerReference'])
+    config = create_distribution_config(
+        [], "glueops.dev", acm_arn, None, caller_reference=config['DistributionConfig']['CallerReference'])
     if config['Enabled']:
         config['Enabled'] = False
-        client.update_distribution(DistributionConfig=config, Id=distribution_id, IfMatch=etag)
+        client.update_distribution(
+            DistributionConfig=config, Id=distribution_id, IfMatch=etag)
+
 
 def delete_distribution(distribution_id, acm_arn):
+    logger.info(
+        f"Starting/Checking on deletion of Distribution ID: {distribution_id}")
     client = create_aws_client('cloudfront')
     state = get_live_distribution_status(distribution_id)
     config = get_live_distribution_config(distribution_id)
@@ -187,11 +207,15 @@ def delete_distribution(distribution_id, acm_arn):
         state = get_live_distribution_status(distribution_id)
     if state["distribution_enabled"] == False and state["status"] != "InProgress":
         logger.info(state)
+        logger.info(f"Deleting Distribution ID: {distribution_id}")
+
         client.delete_distribution(Id=distribution_id, IfMatch=etag)
         return True
     return False
 
+
 def create_distribution_config(domains, glueops_cluster_ingress_domain, acm_arn, web_acl_id=None, caller_reference=None):
+    logger.info(f"Creating a Distribution config for: {domains}")
     if web_acl_id is None:
         web_acl_id = ""
 
@@ -335,5 +359,7 @@ def create_distribution_config(domains, glueops_cluster_ingress_domain, acm_arn,
         "ContinuousDeploymentPolicyId": "",
         "Staging": False
     }
+
+    logger.info(distribution_config)
 
     return distribution_config
