@@ -60,8 +60,6 @@ class Controller(BaseHTTPRequestHandler):
                     status_dict["distribution_request"] = {}
             if acm_arn is not None and distribution_id is None:
                 delete_acm_certificate(acm_arn)
-                logger.info(
-                    f"Successfully Deleted Distribution ID: {distribution_id} and ACM CERT: {acm_arn}")
                 return {"finalized": True}
             if distribution_id is None and acm_arn is None:
                 return {"finalized": True}
