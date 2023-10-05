@@ -1,28 +1,30 @@
-apiVersion: metacontroller.glueops.dev/v1alpha1
-kind: WebApplicationFirewall
-metadata:
-  name: exampleone
-  namespace: default
-spec:
-  domains:
-    - 'venkatamutyala.com'
-    - '*.theupskilling.dev'
 ---
 apiVersion: metacontroller.glueops.dev/v1alpha1
 kind: WebApplicationFirewall
 metadata:
-  name: exampletwo
+  name: example1
   namespace: default
 spec:
   domains:
-    - 'yolo.venkatamutyala.com'
+    - '1.aws-waf-testing.venkatamutyala.com'
+
 ---
 apiVersion: metacontroller.glueops.dev/v1alpha1
 kind: WebApplicationFirewall
 metadata:
-  name: examplethree
+  name: example2
   namespace: default
 spec:
   domains:
-    - 'venkata.theupskilling.dev'
-    - 'venkata1.theupskilling.dev'
+    - '2.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example3
+  namespace: default
+spec:
+  domains:
+    - '3.aws-waf-testing.venkatamutyala.com'
+

@@ -17,6 +17,8 @@ spec:
     sync:
       webhook:
         url: http://172.17.0.1:8080/sync
+        timeout: "60s"
     finalize:
       webhook:
         url: http://172.17.0.1:8080/finalize
+        timeout: "60s"
