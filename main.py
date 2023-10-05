@@ -73,15 +73,10 @@ class Controller(BaseHTTPRequestHandler):
                             f"There are updates in progress for DISTRIBUTION ID: {distribution_id} so we are going to skip any updates now")
 
         if self.path.endswith('/finalize'):
-            if distribution_id is not None:
-                if delete_distribution(distribution_id):
-                    status_dict["distribution_request"] = {}
-            if acm_arn is not None and distribution_id is None:
-                delete_acm_certificate(acm_arn)
             try:
-                delete_all_cloudfront_distributions(aws_resource_tags)
-                delete_all_acm_certificates(aws_resource_tags)
-                return {"finalized": True}
+                if delete_all_cloudfront_distributions(aws_resource_tags):
+                    if delete_all_acm_certificates(aws_resource_tags):
+                        return {"finalized": True}
             except Exception as e:
                 logger.error(f"Exception when trying to delete all ACM and CloudFront Resources. We will try again shortly. Exception {e}")
                 

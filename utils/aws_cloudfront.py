@@ -131,7 +131,12 @@ def delete_all_cloudfront_distributions(aws_resource_tags):
     for arn in arns_to_delete:
         id = get_distribution_id_from_arn(arn)
         delete_distribution(distribution_id=id)
-    logger.info(f"Finished all CloudFront distributions with these tags: {aws_resource_tags}")
+    if len(arns_to_delete) == 0:
+        logger.info(f"Finished all CloudFront distributions with these tags: {aws_resource_tags}")
+        return True
+    else:
+        logger.info(f"Still deleting all CloudFront distributions with these tags: {aws_resource_tags}")
+        return False
         
 
 def create_distribution_config(domains, glueops_cluster_ingress_domain, acm_arn, web_acl_id=None, caller_reference=None):

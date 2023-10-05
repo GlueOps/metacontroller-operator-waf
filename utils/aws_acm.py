@@ -118,6 +118,14 @@ def delete_all_acm_certificates(aws_resource_tags):
     arns_to_delete = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
     for arn in arns_to_delete:
         delete_acm_certificate(arn)
+    if len(arns_to_delete) == 0:
+        logger.info(f"Finished deleting all ACM Certificates with these tags: {aws_resource_tags}")
+        return True
+    else:
+        logger.info(f"Still deleting all ACM Certificates with these tags: {aws_resource_tags}")
+        return False
+        
+        
 
 
 def get_domains_from_existing_certificate(certificate_arn):
