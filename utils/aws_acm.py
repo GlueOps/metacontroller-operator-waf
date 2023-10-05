@@ -8,8 +8,52 @@ import logging
 logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
 from utils.tools import *
 
+
+
+def is_certificate_used(certificate_arn):
+    acm = create_aws_client('acm')
+    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    in_use_by = certificate['Certificate']['InUseBy']
+    return bool(in_use_by)
+
+
+
+def was_certificate_created_recently(certificate_arn, days=7):
+    """
+    Check if the ACM certificate was created within the last specified number of days.
+    
+    Args:
+    - certificate_arn (str): ARN of the ACM certificate.
+    - days (int): Number of days to check against (default is 3).
+
+    Returns:
+    - bool: True if the certificate was created within the last 'days', False otherwise.
+    """
+    acm = boto3.client('acm')
+    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    created_date = certificate['Certificate']['NotBefore']
+
+    # Check if the certificate was created within the last 'days'
+    return (datetime.now(created_date.tzinfo) - created_date) <= timedelta(days=days)
+
+
 def create_acm_certificate(domains, uid, aws_resource_tags):
-    logging.info(f"Creating ACM certificate for: {domains}")
+    existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
+    for existing_cert_arn in existing_cert_arns:
+        if is_certificate_used(certificate_arn):
+            logger.info(f"Leaving ACM ARN {certificate_arn} alone as it's in use.")
+        else:
+            if was_certificate_created_recently(certificate_arn):
+                if need_new_certificate(certificate_arn, domains):
+                    delete_acm_certificate(existing_cert_arn)
+                    logger.info(f"Deleted unused ACM: {existing_cert_arn}")
+                else:
+                    logger.info(f"Leaving ACM ARN {certificate_arn} alone as it was created in the last 7 days. So there might be a pending distribution update")
+                    return certificate_arn
+
+            
+
+    logging.info(f"Creating ACM certificate for: {domains} with tags: {aws_resource_tags}")
     if not domains:
         raise ValueError("At least one domain is required")
 
@@ -67,6 +111,13 @@ def delete_acm_certificate(certificate_arn):
     logger.info(f"Deleting ACM Certificate {certificate_arn}")
     acm = create_aws_client('acm')
     acm.delete_certificate(CertificateArn=certificate_arn)
+    
+    
+def delete_all_acm_certificates(aws_resource_tags):
+    logger.info(f"Deleting all ACM Certificates with these tags: {aws_resource_tags}")
+    arns_to_delete = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
+    for arn in arns_to_delete:
+        delete_acm_certificate(arn)
 
 
 def get_domains_from_existing_certificate(certificate_arn):

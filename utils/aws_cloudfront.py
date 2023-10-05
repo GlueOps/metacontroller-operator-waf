@@ -8,7 +8,27 @@ import logging
 logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
 from utils.tools import *
 
+
+
+def get_distribution_id_from_arn(arn):
+    """Extract CloudFront Distribution ID from its ARN."""
+    # Split the ARN by ':' and then by '/' to get the Distribution ID
+    parts = arn.split(':')
+    if len(parts) > 5:
+        distribution_id = parts[5].split('/')[-1]
+        return distribution_id
+    return None
+
+
 def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, domains, resource_uid, aws_resource_tags):
+    existing_distribution_arns = get_resource_arns_using_tags(aws_resource_tags, ['cloudfront:distribution'])
+    if len(existing_distribution_arns) > 1:
+        logger.exception("Something is wrong. There isn't a situation where we should have two distributions with the same tags. This requires manual cleanup.")
+    for existing_distribution_arn in existing_distribution_arns:
+        existing_distribution_id = get_distribution_id_from_arn(existing_distribution_arn)
+        return get_live_distribution_status(existing_distribution_id)
+            
+            
     logger.info(f"Creating distribution for: {domains}")
     cdn = create_aws_client('cloudfront')
     DistributionConfigWithTags = { "DistributionConfig" : create_distribution_config(
@@ -57,6 +77,7 @@ def parse_distribution_state(distribution_details):
         "distribution_id": distribution_details.get('Distribution', {}).get('Id', None),
         "distribution_enabled": distribution_details.get('Distribution', {}).get('DistributionConfig', {}).get('Enabled', None),
         "cloudfront_url": distribution_details.get('Distribution', {}).get('DomainName', None),
+        "acm_certificate_arn":  distribution_details.get('Distribution', {}).get('DistributionConfig', {}).get('ViewerCertificate', None).get('ACMCertificateArn', None),
         "last_modified_time": str(distribution_details.get('Distribution', {}).get('LastModifiedTime', None))
     }
     logger.info(f"Parsed distribution details: {state}")
@@ -85,7 +106,7 @@ def disable_distribution(distribution_id, acm_arn):
             DistributionConfig=config, Id=distribution_id, IfMatch=etag)
 
 
-def delete_distribution(distribution_id, acm_arn):
+def delete_distribution(distribution_id):
     logger.info(
         f"Starting/Checking on deletion of Distribution ID: {distribution_id}")
     client = create_aws_client('cloudfront')
@@ -94,16 +115,24 @@ def delete_distribution(distribution_id, acm_arn):
     etag = config['ETag']
     if state["distribution_enabled"] == True and state["status"] != "InProgress":
         logger.info("disabling distribution")
-        disable_distribution(distribution_id, acm_arn)
+        disable_distribution(distribution_id, state["acm_certificate_arn"])
         state = get_live_distribution_status(distribution_id)
     if state["distribution_enabled"] == False and state["status"] != "InProgress":
         logger.info(state)
         logger.info(f"Deleting Distribution ID: {distribution_id}")
-
         client.delete_distribution(Id=distribution_id, IfMatch=etag)
         return True
     return False
 
+
+def delete_all_cloudfront_distributions(aws_resource_tags):
+    logger.info(f"Deleting all CloudFront distributions with these tags: {aws_resource_tags}")
+    arns_to_delete = get_resource_arns_using_tags(aws_resource_tags, ['cloudfront:distribution'])
+    for arn in arns_to_delete:
+        id = get_distribution_id_from_arn(arn)
+        delete_distribution(distribution_id=id)
+    logger.info(f"Finished all CloudFront distributions with these tags: {aws_resource_tags}")
+        
 
 def create_distribution_config(domains, glueops_cluster_ingress_domain, acm_arn, web_acl_id=None, caller_reference=None):
     logger.info(f"Creating a Distribution config for: {domains}")
