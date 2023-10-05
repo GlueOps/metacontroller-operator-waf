@@ -12,7 +12,7 @@ def create_aws_client(service):
     return boto3.client(service, region_name='us-east-1')
 
 
-def create_acm_certificate(domains):
+def create_acm_certificate(domains, uid):
     logging.info(f"Creating ACM certificate for: {domains}")
     if not domains:
         raise ValueError("At least one domain is required")
@@ -24,13 +24,15 @@ def create_acm_certificate(domains):
     # change the region as needed
     acm = create_aws_client('acm')
     response = None
+    uid = str(uid)[:-10].replace('-','')
+
     try:
         if len(alternative_names) == 0:
             response = acm.request_certificate(
                 DomainName=main_domain,
                 ValidationMethod='DNS',  # this example is for DNS validation
                 # this should be a unique string value. This can be anything as long as it's the same per unique request. But probably just best to leave it hardcoded to glueops. If the same certificate gets requested in the same hour it'll help avoid duplicates
-                IdempotencyToken=str(int(time.time()))
+                IdempotencyToken=uid
             )
         else:
             response = acm.request_certificate(
@@ -38,7 +40,7 @@ def create_acm_certificate(domains):
                 ValidationMethod='DNS',  # this example is for DNS validation
                 SubjectAlternativeNames=alternative_names,
                 # this should be a unique string value. This can be anything as long as it's the same per unique request. But probably just best to leave it hardcoded to glueops. If the same certificate gets requested in the same hour it'll help avoid duplicates
-                IdempotencyToken=str(int(time.time()))
+                IdempotencyToken=uid
             )
         certificate_arn = response['CertificateArn']
         logging.info(
@@ -121,11 +123,11 @@ def update_conditions(existing_conditions, new_conditions):
     return updated_conditions
 
 
-def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, domains):
+def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, domains, resource_uid):
     logger.info(f"Creating distribution for: {domains}")
     cdn = create_aws_client('cloudfront')
     response = cdn.create_distribution(DistributionConfig=create_distribution_config(
-        domains, origin_domain_name, acm_certificate_arn))
+        domains, origin_domain_name, acm_certificate_arn, web_acl_id, caller_reference=resource_uid))
     state = parse_distribution_state(response)
     return state
 
@@ -219,9 +221,6 @@ def create_distribution_config(domains, glueops_cluster_ingress_domain, acm_arn,
     logger.info(f"Creating a Distribution config for: {domains}")
     if web_acl_id is None:
         web_acl_id = ""
-
-    if caller_reference is None:
-        caller_reference = str(int(time.time()))
 
     distribution_config = {
         "CallerReference": caller_reference,
