@@ -6,7 +6,7 @@ metadata:
   namespace: default
 spec:
   domains:
-    - '5.aws-waf-testing.venkatamutyala.com'
+    - '15.aws-waf-testing.venkatamutyala.com'
 
 ---
 apiVersion: metacontroller.glueops.dev/v1alpha1
@@ -16,7 +16,7 @@ metadata:
   namespace: default
 spec:
   domains:
-    - '7.aws-waf-testing.venkatamutyala.com'
+    - '16.aws-waf-testing.venkatamutyala.com'
 
 ---
 apiVersion: metacontroller.glueops.dev/v1alpha1
@@ -26,4 +26,4 @@ metadata:
   namespace: default
 spec:
   domains:
-    - '8.aws-waf-testing.venkatamutyala.com'
+    - '17.aws-waf-testing.venkatamutyala.com'

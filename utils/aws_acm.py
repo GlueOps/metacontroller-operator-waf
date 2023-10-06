@@ -18,21 +18,11 @@ def is_certificate_used(certificate_arn):
 
 
 
-def was_certificate_created_recently(certificate_arn, minutes=10):
-    """
-    Check if the ACM certificate was created within the last specified number of days.
-    
-    Args:
-    - certificate_arn (str): ARN of the ACM certificate.
-    - days (int): Number of days to check against (default is 3).
-
-    Returns:
-    - bool: True if the certificate is older than 'minutes', False otherwise.
-    """
+def cert_is_old(certificate_arn):
     acm = boto3.client('acm')
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
     created_date = certificate['Certificate']['CreatedAt']
-
+    minutes = 43800
     # Check if the certificate is older than 'minutes'
     logger.info(f"Certificate ACM ARN: {certificate_arn} was created on: {created_date}")
     old_certificate = (datetime.now(created_date.tzinfo) - created_date) > timedelta(minutes=minutes)
@@ -46,9 +36,7 @@ def cleanup_orphaned_certs(aws_resource_tags):
         if is_certificate_used(existing_cert_arn):
             logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it's in use.")
         else:
-            if not was_certificate_created_recently(existing_cert_arn):
-                logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it was created in the last 7 days. So there might be a pending distribution update")
-            else:
+            if cert_is_old(existing_cert_arn):
                 delete_acm_certificate(existing_cert_arn)
 
 
