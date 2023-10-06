@@ -40,16 +40,16 @@ def was_certificate_created_recently(certificate_arn, days=7):
 def create_acm_certificate(domains, uid, aws_resource_tags):
     existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
     for existing_cert_arn in existing_cert_arns:
-        if is_certificate_used(certificate_arn):
-            logger.info(f"Leaving ACM ARN {certificate_arn} alone as it's in use.")
+        if is_certificate_used(existing_cert_arn):
+            logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it's in use.")
         else:
-            if was_certificate_created_recently(certificate_arn):
-                if need_new_certificate(certificate_arn, domains):
+            if was_certificate_created_recently(existing_cert_arn):
+                if need_new_certificate(existing_cert_arn, domains):
                     delete_acm_certificate(existing_cert_arn)
                     logger.info(f"Deleted unused ACM: {existing_cert_arn}")
                 else:
-                    logger.info(f"Leaving ACM ARN {certificate_arn} alone as it was created in the last 7 days. So there might be a pending distribution update")
-                    return certificate_arn
+                    logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it was created in the last 7 days. So there might be a pending distribution update")
+                    return existing_cert_arn
 
             
 
