@@ -18,7 +18,7 @@ def is_certificate_used(certificate_arn):
 
 
 
-def was_certificate_created_recently(certificate_arn, minutes=5):
+def was_certificate_created_recently(certificate_arn, minutes=10):
     """
     Check if the ACM certificate was created within the last specified number of days.
     
@@ -27,31 +27,32 @@ def was_certificate_created_recently(certificate_arn, minutes=5):
     - days (int): Number of days to check against (default is 3).
 
     Returns:
-    - bool: True if the certificate was created within the last 'days', False otherwise.
+    - bool: True if the certificate is older than 'minutes', False otherwise.
     """
     acm = boto3.client('acm')
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
-    created_date = certificate['Certificate']['NotBefore']
+    created_date = certificate['Certificate']['CreatedAt']
 
     # Check if the certificate is older than 'minutes'
-    return (datetime.now(created_date.tzinfo) - created_date) > timedelta(minutes=minutes)
+    logger.info(f"Certificate ACM ARN: {certificate_arn} was created on: {created_date}")
+    old_certificate = (datetime.now(created_date.tzinfo) - created_date) > timedelta(minutes=minutes)
+    logger.info(f"ACM ARN: {certificate_arn} was created more than {minutes} minutes ago: {old_certificate}")
+    return old_certificate
 
 
-
-
-def create_acm_certificate(domains, uid, aws_resource_tags):
+def cleanup_orphaned_certs(aws_resource_tags):
     existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
     for existing_cert_arn in existing_cert_arns:
         if is_certificate_used(existing_cert_arn):
             logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it's in use.")
         else:
-            if was_certificate_created_recently(existing_cert_arn):
+            if not was_certificate_created_recently(existing_cert_arn):
                 logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it was created in the last 7 days. So there might be a pending distribution update")
             else:
                 delete_acm_certificate(existing_cert_arn)
 
-            
 
+def create_acm_certificate(domains, uid, aws_resource_tags):
     logging.info(f"Creating ACM certificate for: {domains} with tags: {aws_resource_tags}")
     if not domains:
         raise ValueError("At least one domain is required")

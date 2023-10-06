@@ -48,6 +48,7 @@ class Controller(BaseHTTPRequestHandler):
             
             
         if self.path.endswith('/sync'):
+            cleanup_orphaned_certs(aws_resource_tags)
             if acm_arn is not None:
                 if need_new_certificate(acm_arn, domains):
                     logger.info("Requesting a new certificate")
