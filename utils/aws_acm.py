@@ -18,7 +18,7 @@ def is_certificate_used(certificate_arn):
 
 
 
-def was_certificate_created_recently(certificate_arn, days=7):
+def was_certificate_created_recently(certificate_arn, minutes=5):
     """
     Check if the ACM certificate was created within the last specified number of days.
     
@@ -33,8 +33,10 @@ def was_certificate_created_recently(certificate_arn, days=7):
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
     created_date = certificate['Certificate']['NotBefore']
 
-    # Check if the certificate was created within the last 'days'
-    return (datetime.now(created_date.tzinfo) - created_date) <= timedelta(days=days)
+    # Check if the certificate is older than 'minutes'
+    return (datetime.now(created_date.tzinfo) - created_date) > timedelta(minutes=minutes)
+
+
 
 
 def create_acm_certificate(domains, uid, aws_resource_tags):
@@ -44,12 +46,9 @@ def create_acm_certificate(domains, uid, aws_resource_tags):
             logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it's in use.")
         else:
             if was_certificate_created_recently(existing_cert_arn):
-                if need_new_certificate(existing_cert_arn, domains):
-                    delete_acm_certificate(existing_cert_arn)
-                    logger.info(f"Deleted unused ACM: {existing_cert_arn}")
-                else:
-                    logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it was created in the last 7 days. So there might be a pending distribution update")
-                    return existing_cert_arn
+                logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it was created in the last 7 days. So there might be a pending distribution update")
+            else:
+                delete_acm_certificate(existing_cert_arn)
 
             
 
