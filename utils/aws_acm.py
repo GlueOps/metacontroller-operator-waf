@@ -18,7 +18,7 @@ def is_certificate_used(certificate_arn):
 
 
 
-def cert_is_old(certificate_arn):
+def is_cert_is_old(certificate_arn):
     acm = boto3.client('acm')
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
     created_date = certificate['Certificate']['CreatedAt']
@@ -36,7 +36,7 @@ def cleanup_orphaned_certs(aws_resource_tags):
         if is_certificate_used(existing_cert_arn):
             logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it's in use.")
         else:
-            if cert_is_old(existing_cert_arn):
+            if is_cert_is_old(existing_cert_arn):
                 delete_acm_certificate(existing_cert_arn)
 
 
