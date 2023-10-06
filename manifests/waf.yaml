@@ -6,7 +6,7 @@ metadata:
   namespace: default
 spec:
   domains:
-    - '1.aws-waf-testing.venkatamutyala.com'
+    - '2.aws-waf-testing.venkatamutyala.com'
 
 ---
 apiVersion: metacontroller.glueops.dev/v1alpha1
@@ -16,7 +16,7 @@ metadata:
   namespace: default
 spec:
   domains:
-    - '2.aws-waf-testing.venkatamutyala.com'
+    - '3.aws-waf-testing.venkatamutyala.com'
 
 ---
 apiVersion: metacontroller.glueops.dev/v1alpha1
@@ -26,5 +26,384 @@ metadata:
   namespace: default
 spec:
   domains:
-    - '3.aws-waf-testing.venkatamutyala.com'
+    - '4.aws-waf-testing.venkatamutyala.com'
 
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example4
+  namespace: default
+spec:
+  domains:
+    - '5.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example5
+  namespace: default
+spec:
+  domains:
+    - '6.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example6
+  namespace: default
+spec:
+  domains:
+    - '7.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example7
+  namespace: default
+spec:
+  domains:
+    - '8.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example8
+  namespace: default
+spec:
+  domains:
+    - '9.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example9
+  namespace: default
+spec:
+  domains:
+    - '10.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example10
+  namespace: default
+spec:
+  domains:
+    - '11.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example11
+  namespace: default
+spec:
+  domains:
+    - '12.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example12
+  namespace: default
+spec:
+  domains:
+    - '13.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example13
+  namespace: default
+spec:
+  domains:
+    - '14.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example14
+  namespace: default
+spec:
+  domains:
+    - '15.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example15
+  namespace: default
+spec:
+  domains:
+    - '16.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example16
+  namespace: default
+spec:
+  domains:
+    - '17.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example17
+  namespace: default
+spec:
+  domains:
+    - '18.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example18
+  namespace: default
+spec:
+  domains:
+    - '19.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example19
+  namespace: default
+spec:
+  domains:
+    - '20.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example20
+  namespace: default
+spec:
+  domains:
+    - '21.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example21
+  namespace: default
+spec:
+  domains:
+    - '22.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example22
+  namespace: default
+spec:
+  domains:
+    - '23.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example23
+  namespace: default
+spec:
+  domains:
+    - '24.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example24
+  namespace: default
+spec:
+  domains:
+    - '25.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example25
+  namespace: default
+spec:
+  domains:
+    - '26.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example26
+  namespace: default
+spec:
+  domains:
+    - '27.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example27
+  namespace: default
+spec:
+  domains:
+    - '28.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example28
+  namespace: default
+spec:
+  domains:
+    - '29.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example29
+  namespace: default
+spec:
+  domains:
+    - '30.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example30
+  namespace: default
+spec:
+  domains:
+    - '31.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example31
+  namespace: default
+spec:
+  domains:
+    - '32.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example32
+  namespace: default
+spec:
+  domains:
+    - '33.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example33
+  namespace: default
+spec:
+  domains:
+    - '34.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example34
+  namespace: default
+spec:
+  domains:
+    - '35.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example35
+  namespace: default
+spec:
+  domains:
+    - '36.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example36
+  namespace: default
+spec:
+  domains:
+    - '37.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example37
+  namespace: default
+spec:
+  domains:
+    - '38.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example38
+  namespace: default
+spec:
+  domains:
+    - '39.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example39
+  namespace: default
+spec:
+  domains:
+    - '40.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example40
+  namespace: default
+spec:
+  domains:
+    - '41.aws-waf-testing.venkatamutyala.com'
+
+---
+apiVersion: metacontroller.glueops.dev/v1alpha1
+kind: WebApplicationFirewall
+metadata:
+  name: example41
+  namespace: default
+spec:
+  domains:
+    - '42.aws-waf-testing.venkatamutyala.com'

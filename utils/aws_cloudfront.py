@@ -85,6 +85,16 @@ def parse_distribution_state(distribution_details):
     return state
 
 
+def does_distribution_exist(distribution_id):
+    logger.info("Checking to see if distribution exists or not")
+    try:
+        get_live_distribution_config(distribution_id)
+    except Exception as e:
+        logger.error(f"While checking to see if distribution exists {distribution_id} the following error returned: {e}")
+        return False
+    return True
+
+
 def get_live_distribution_config(distribution_id):
     logger.info(
         f"Getting current status of Distribution ID: {distribution_id}")

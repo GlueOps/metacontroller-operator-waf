@@ -4,13 +4,13 @@ output_file="waf.yaml"
 
 # Start from 3 as per your example
 start=1
-end=$((start + 2))
+end=$((start + 40))
 
 # Clear or create the output file
 > $output_file
 
 for i in $(seq $start $end); do
-  #next=$((i+1))
+  next=$((i+1))
   cat <<EOF >> $output_file
 ---
 apiVersion: metacontroller.glueops.dev/v1alpha1
@@ -20,7 +20,7 @@ metadata:
   namespace: default
 spec:
   domains:
-    - '$i.aws-waf-testing.venkatamutyala.com'
+    - '$next.aws-waf-testing.venkatamutyala.com'
 
 EOF
 done

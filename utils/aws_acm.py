@@ -150,3 +150,12 @@ def need_new_certificate(certificate_arn, domains):
         return True
     else:
         return False
+
+def does_acm_cert_exist(certificate_arn):
+    logger.info("Checking to see if certificate exists or not")
+    try:
+        get_domains_from_existing_certificate(certificate_arn)
+    except Exception as e:
+        logger.error(f"While checking to see if the acm certificate: {certificate_arn} exists the following error returned: {e}")
+        return False
+    return True

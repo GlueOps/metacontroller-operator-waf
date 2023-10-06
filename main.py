@@ -23,10 +23,6 @@ logger.addHandler(handler)
 class Controller(BaseHTTPRequestHandler):
 
     def sync(self, parent, children):
-        # Compute status based on observed state.
-        # desired_status = {
-        #   "pods": len(children["Pod.v1"])
-        # }
         uid = parent.get("metadata").get("uid")
         aws_resource_tags = [
             {
@@ -43,7 +39,14 @@ class Controller(BaseHTTPRequestHandler):
         acm_arn = status_dict.get("certificate_request", {}).get("arn", None)
         distribution_id = status_dict.get(
             "distribution_request", {}).get("distribution_id", None)
-
+        
+        # in case something gets deleted outside of kubernetes setting these to None will let them be recreated by the controller
+        if not does_acm_cert_exist(acm_arn):
+            acm_arn = None
+        if not does_distribution_exist(distribution_id):
+            distribution_id = None
+            
+            
         if self.path.endswith('/sync'):
             if acm_arn is not None:
                 if need_new_certificate(acm_arn, domains):
@@ -83,7 +86,7 @@ class Controller(BaseHTTPRequestHandler):
 
         return {"status": status_dict}
 
-    semaphore = threading.Semaphore(4)
+    semaphore = threading.Semaphore(100)
 
     def do_POST(self):
         try:
