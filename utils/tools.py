@@ -33,7 +33,9 @@ def get_resource_arns_using_tags(tags, aws_resource_filter):
         
     return arns
 
-
-def create_bad_state():
-    print("This is running to create a bad state in the application and help test automated recovery")
-    raise Exception("This is running to create a bad state in the application and help test automated recovery")
+import random
+def create_bad_state_at_random():
+    result = random.choice([True, False])
+    if(result):
+        print("This is running to create a bad state in the application and help test automated recovery")
+        raise Exception("This is running to create a bad state in the application and help test automated recovery")
