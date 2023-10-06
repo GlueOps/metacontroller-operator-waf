@@ -33,6 +33,7 @@ def get_resource_arns_using_tags(tags, aws_resource_filter):
         
     return arns
 
+
 import random
 def create_bad_state_at_random():
     result = random.choice([True, False])

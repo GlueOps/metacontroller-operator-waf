@@ -22,17 +22,66 @@ logger.addHandler(handler)
 
 class Controller(BaseHTTPRequestHandler):
 
+    semaphore = threading.Semaphore(100)
+
     def sync(self, parent, children):
+        uid, aws_resource_tags, domains, status_dict, acm_arn, distribution_id = self._get_parent_data(parent)
+
+        if self.path.endswith('/sync'):
+            cleanup_orphaned_certs(aws_resource_tags)
+            # Handle certificate requests
+            if acm_arn is None or need_new_certificate(acm_arn, domains):
+                logger.info("Requesting a new certificate")
+                acm_arn = create_acm_certificate(domains, uid, aws_resource_tags)
+                
+            certificate_status = check_certificate_validation(acm_arn)
+            status_dict["certificate_request"] = certificate_status
+
+
+            if status_dict["certificate_request"]["status"] == "ISSUED":
+                dist_request = status_dict.setdefault("distribution_request", {})
+                
+                if distribution_id is None:
+                    dist_request = create_distribution(
+                        "yahoo.com", acm_arn, None, domains, uid, aws_resource_tags=aws_resource_tags)
+                else:
+                    dist_request = get_live_distribution_status(distribution_id)
+
+                    if dist_request["status"] != "InProgress":
+                        update_distribution(distribution_id, "yahoo.com", acm_arn, None, domains)
+                    else:
+                        logger.info(
+                            f"There are updates in progress for DISTRIBUTION ID: {distribution_id}. Skipping updates.")
+                
+                status_dict["distribution_request"] = dist_request
+
+        if self.path.endswith('/finalize'):
+            return self.finalize_hook(aws_resource_tags)
+
+        return {"status": status_dict}
+
+
+    def finalize_hook(self, aws_resource_tags):
+        try:
+            if not delete_all_cloudfront_distributions(aws_resource_tags):
+                logger.error("Failed to delete all CloudFront distributions. We will try again shortly.")
+                return
+
+            if not delete_all_acm_certificates(aws_resource_tags):
+                logger.error("Failed to delete all ACM certificates after successfully deleting CloudFront distributions. We will try again shortly.")
+                return
+
+            return {"finalized": True}
+            
+        except Exception as e:
+            logger.error(f"Unexpected exception occurred: {e}. We will try again shortly.")
+    
+    def _get_parent_data(self, parent):
         uid = parent.get("metadata").get("uid")
         aws_resource_tags = [
-            {
-                "Key": "kubernetes_resource_uid",
-                "Value": uid
-            },
-            {
-                "Key": "captain_domain",
-                "Value": os.environ.get('CAPTAIN_DOMAIN', 'local-development')
-            }
+            {"Key": "kubernetes_resource_uid", "Value": uid},
+            {"Key": "captain_domain",
+             "Value": os.environ.get('CAPTAIN_DOMAIN', 'local-development')}
         ]
         domains = parent.get("spec", {}).get("domains")
         status_dict = parent.get("status", {})
@@ -46,48 +95,7 @@ class Controller(BaseHTTPRequestHandler):
         if not does_distribution_exist(distribution_id):
             distribution_id = None
             
-            
-        if self.path.endswith('/sync'):
-            cleanup_orphaned_certs(aws_resource_tags)
-            if acm_arn is not None:
-                if need_new_certificate(acm_arn, domains):
-                    logger.info("Requesting a new certificate")
-                    acm_arn = create_acm_certificate(
-                        domains, uid, aws_resource_tags)
-                certificate_status = check_certificate_validation(acm_arn)
-                status_dict["certificate_request"] = certificate_status
-            elif acm_arn is None:
-                acm_arn = create_acm_certificate(
-                    domains, uid, aws_resource_tags)
-                certificate_status = check_certificate_validation(acm_arn)
-                status_dict["certificate_request"] = certificate_status
-
-            if status_dict["certificate_request"]["status"] == "ISSUED":
-                if distribution_id is None:
-                    status_dict["distribution_request"] = create_distribution(
-                        "yahoo.com", acm_arn, None, domains, uid, aws_resource_tags=aws_resource_tags)
-                if distribution_id is not None:
-                    status_dict["distribution_request"] = get_live_distribution_status(
-                        distribution_id)
-                    if status_dict["distribution_request"]["status"] != "InProgress":
-                        update_distribution(
-                            distribution_id, "yahoo.com", acm_arn, None, domains)
-                    else:
-                        logger.info(
-                            f"There are updates in progress for DISTRIBUTION ID: {distribution_id} so we are going to skip any updates now")
-
-        if self.path.endswith('/finalize'):
-            try:
-                if delete_all_cloudfront_distributions(aws_resource_tags):
-                    if delete_all_acm_certificates(aws_resource_tags):
-                        return {"finalized": True}
-            except Exception as e:
-                logger.error(f"Exception when trying to delete all ACM and CloudFront Resources. We will try again shortly. Exception {e}")
-                
-
-        return {"status": status_dict}
-
-    semaphore = threading.Semaphore(100)
+        return uid, aws_resource_tags, domains, status_dict, acm_arn, distribution_id
 
     def do_POST(self):
         try:
@@ -148,6 +156,8 @@ def run(server_class=HTTPServer, handler_class=Controller, port=8080):
             continue
 
     logger.info("Server has shut down.")
+    
+    
 
 
 run()
