@@ -10,23 +10,23 @@ from utils.tools import *
 from utils.vault import *
 
 
-def is_certificate_used(certificate_arn):
+def is_certificate_used(cert_state):
+    return cert_state['Certificate']['InUseBy']
+
+def get_cert_state(certificate_arn):
     acm = create_aws_client('acm')
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
-    in_use_by = certificate['Certificate']['InUseBy']
-    return bool(in_use_by)
+    return certificate
 
 
-
-def is_cert_is_old(certificate_arn):
-    acm = create_aws_client('acm')
-    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
-    created_date = certificate['Certificate']['CreatedAt']
+def is_cert_is_old(cert_state):
+    created_date = cert_state['Certificate']['CreatedAt']
     minutes = 43800
     # Check if the certificate is older than 'minutes'
-    logger.info(f"Certificate ACM ARN: {certificate_arn} was created on: {created_date}")
+    arn = cert_state['Certificate']['CertificateArn']
+    logger.info(f"Certificate ACM ARN: {arn} was created on: {created_date}")
     old_certificate = (datetime.now(created_date.tzinfo) - created_date) > timedelta(minutes=minutes)
-    logger.info(f"ACM ARN: {certificate_arn} was created more than {minutes} minutes ago: {old_certificate}")
+    logger.info(f"ACM ARN: {arn} was created more than {minutes} minutes ago: {old_certificate}")
     return old_certificate
 
 
@@ -39,10 +39,11 @@ def is_cert_imported(certificate_arn):
 def cleanup_orphaned_certs(aws_resource_tags):
     existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
     for existing_cert_arn in existing_cert_arns:
-        if is_certificate_used(existing_cert_arn):
+        cert_state = get_cert_state(existing_cert_arn)
+        if is_certificate_used(cert_state):
             logger.info(f"Leaving ACM ARN {existing_cert_arn} alone as it's in use.")
         else:
-            if is_cert_is_old(existing_cert_arn):
+            if is_cert_is_old(cert_state):
                 delete_acm_certificate(existing_cert_arn)
 
 
@@ -93,11 +94,36 @@ def check_certificate_validation(certificate_arn):
     logger.info(f"Checking on ACM Certificate: {certificate_arn}")
     acm = create_aws_client('acm')
     cert_details = acm.describe_certificate(CertificateArn=certificate_arn)
+    cert_details = cert_details['Certificate']
+    # Check for expiration
+    overall_health = "UNKNOWN"
+    expiration_date = cert_details['NotAfter']
+    # Convert expiration_date to be offset-naive
+    expiration_date_naive = expiration_date.replace(tzinfo=None)
+    if expiration_date_naive - timedelta(days=45) <= datetime.utcnow():
+        overall_health = "NotHealthy"
+
+    # Check for status
+    statuses_to_check = [
+        "PENDING_VALIDATION",
+        "REVOKED",
+        "EXPIRED",
+        "FAILED",
+        "VALIDATION_TIMED_OUT",
+        "RENEWING"
+    ]
+    status = cert_details['Status']
+    if status in statuses_to_check:
+        overall_health = "NotHealthy"
+    elif status == "ISSUED" and overall_health == "UNKNOWN":
+        overall_health = "Healthy"
 
     return {
         "arn": certificate_arn,
-        "status": cert_details.get('Certificate', {}).get('Status', None),
-        "validations": cert_details.get('Certificate', {}).get('DomainValidationOptions', None)
+        "status": cert_details.get('Status', None),
+        "validations": cert_details.get('DomainValidationOptions', None),
+        "expiration_date": str(cert_details['NotAfter']),
+        "Health": overall_health
     }
 
 

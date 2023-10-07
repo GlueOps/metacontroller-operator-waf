@@ -71,6 +71,10 @@ def get_live_distribution_status(distribution_id):
 
 def parse_distribution_state(distribution_details):
     logger.info(f"Parsing distribution_state: {distribution_details}")
+    dist_status = distribution_details.get('Distribution', {}).get('Status', None)
+    health = "UNKOWN"
+    if "Deployed" == dist_status:
+        health = "Healthy"
     state = {
         "status": distribution_details.get('Distribution', {}).get('Status', None),
         "arn": distribution_details.get('Distribution', {}).get('ARN', None),
@@ -78,6 +82,7 @@ def parse_distribution_state(distribution_details):
         "distribution_enabled": distribution_details.get('Distribution', {}).get('DistributionConfig', {}).get('Enabled', None),
         "cloudfront_url": distribution_details.get('Distribution', {}).get('DomainName', None),
         "acm_certificate_arn":  distribution_details.get('Distribution', {}).get('DistributionConfig', {}).get('ViewerCertificate', None).get('ACMCertificateArn', None),
+        "Health": health,
         "last_modified_time": str(distribution_details.get('Distribution', {}).get('LastModifiedTime', None))
     }
     logger.info(f"Parsed distribution details: {state}")
