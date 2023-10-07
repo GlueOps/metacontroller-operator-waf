@@ -1,10 +1,7 @@
-
-
 import requests
 import os
 
 VAULT_ADDR = os.environ.get('VAULT_ADDR')
-secret_path = "secret/glueops-venkatamutyala.com"
 K8S_ROLE = os.environ.get('K8S_ROLE', 'default-role')
 VAULT_TOKEN = os.environ.get('VAULT_TOKEN')
 POMERIUM_COOKIE = os.environ.get("POMERIUM_COOKIE")
@@ -47,5 +44,3 @@ def get_data_from_vault(secret_path):
     if not response_data:
         raise Exception("Failed to retrieve certificate data from Vault.")
     return response_data
-
-print(get_data_from_vault(secret_path))
