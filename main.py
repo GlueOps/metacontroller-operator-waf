@@ -26,15 +26,15 @@ class Controller(BaseHTTPRequestHandler):
     semaphore = threading.Semaphore(100)
 
     def sync(self, parent, children):
-        uid, aws_resource_tags, domains, secret_store_path, status_dict, acm_arn, distribution_id = self._get_parent_data(parent)
+        uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id = self._get_parent_data(parent)
         if self.path.endswith('/sync'):
             cleanup_orphaned_certs(aws_resource_tags)
             # Handle certificate requests
-            if (acm_arn is None or need_new_certificate(acm_arn, domains)) and secret_store_path is None:
+            if (acm_arn is None or need_new_certificate(acm_arn, domains)) and custom_certificate_secret_store_path is None:
                 logger.info("Requesting a new certificate")
                 acm_arn = create_acm_certificate(domains, uid, aws_resource_tags)
-            elif (acm_arn is None or secret_store_path is not None):
-                acm_arn = import_cert_to_acm(secret_store_path, aws_resource_tags)
+            elif (acm_arn is None or custom_certificate_secret_store_path is not None):
+                acm_arn = import_cert_to_acm(custom_certificate_secret_store_path, aws_resource_tags)
                 
             certificate_status = check_certificate_validation(acm_arn)
             status_dict["certificate_request"] = certificate_status
@@ -86,7 +86,7 @@ class Controller(BaseHTTPRequestHandler):
              "Value": os.environ.get('CAPTAIN_DOMAIN')}
         ]
         domains = parent.get("spec", {}).get("domains")
-        secret_store_path = parent.get("spec", {}).get("secret_store_path")
+        custom_certificate_secret_store_path = parent.get("spec", {}).get("custom_certificate_secret_store_path")
         status_dict = parent.get("status", {})
         acm_arn = status_dict.get("certificate_request", {}).get("arn", None)
         distribution_id = status_dict.get(
@@ -98,7 +98,7 @@ class Controller(BaseHTTPRequestHandler):
         if not does_distribution_exist(distribution_id):
             distribution_id = None
             
-        return uid, aws_resource_tags, domains, secret_store_path, status_dict, acm_arn, distribution_id
+        return uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id
 
     def do_POST(self):
         try:
