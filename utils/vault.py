@@ -2,7 +2,7 @@ import requests
 import os
 
 VAULT_ADDR = os.environ.get('VAULT_ADDR')
-K8S_ROLE = os.environ.get('K8S_ROLE', 'default-role')
+K8S_ROLE = os.environ.get('K8S_ROLE')
 VAULT_TOKEN = os.environ.get('VAULT_TOKEN')
 POMERIUM_COOKIE = os.environ.get("POMERIUM_COOKIE")
 
