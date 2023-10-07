@@ -7,7 +7,7 @@ from json_log_formatter import JsonFormatter
 import logging
 logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
 from utils.tools import *
-
+from utils.vault import *
 
 
 def is_certificate_used(certificate_arn):
@@ -147,3 +147,49 @@ def does_acm_cert_exist(certificate_arn):
         logger.error(f"While checking to see if the acm certificate: {certificate_arn} exists the following error returned: {e}")
         return False
     return True
+
+
+def get_cert_from_vault(secret_path):
+    response = get_data_from_vault(secret_path)
+    
+    cert = response.get('cert')
+    privatekey = response.get('privkey')
+    fullchain = response.get('fullchain')
+        
+    return cert, privatekey, fullchain
+
+
+def get_serial_number(certificate_arn):
+    acm = boto3.client('acm')
+    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    return certificate['Certificate']['Serial']
+
+def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
+    cert, privatekey, fullchain = get_cert_from_vault(secret_path_in_vault)
+    serial_number_of_current_cert_from_secret_store = extract_serial_number_from_cert_string(cert)
+    
+    existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
+    for cert_arn in existing_cert_arns:
+        acm_serial_number = get_serial_number(cert_arn)
+        if serial_number_of_current_cert_from_secret_store == acm_serial_number:
+            logger.info(f"Looks like the certificate from Vault {secret_path_in_vault} is already in AWS ACM as: {cert_arn}")
+            return cert_arn
+    
+    logger.info(f"Looks like the certificate from Vault {secret_path_in_vault} is not in AWS ACM. It's not being imported.")
+    acm = create_aws_client('acm')
+    
+    if fullchain:
+        response = acm.import_certificate(
+            Certificate=cert,
+            PrivateKey=privatekey,
+            CertificateChain=fullchain,
+            Tags=aws_resource_tags
+        )
+    else:
+        response = acm.import_certificate(
+            Certificate=cert,
+            PrivateKey=privatekey,
+            Tags=aws_resource_tags
+        )
+    
+    return response['CertificateArn']

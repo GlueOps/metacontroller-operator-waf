@@ -6,7 +6,8 @@ from deepdiff import DeepDiff
 from json_log_formatter import JsonFormatter
 import logging
 logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
-
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 def create_aws_client(service):
     return boto3.client(service, region_name='us-east-1')
@@ -33,10 +34,14 @@ def get_resource_arns_using_tags(tags, aws_resource_filter):
         
     return arns
 
-
-import random
-def create_bad_state_at_random():
-    result = random.choice([True, False])
-    if(result):
-        print("This is running to create a bad state in the application and help test automated recovery")
-        raise Exception("This is running to create a bad state in the application and help test automated recovery")
+def extract_serial_number_from_cert_string(cert_string):
+    certificate = x509.load_pem_x509_certificate(cert_string.encode(), default_backend())
+    decimal_serial = certificate.serial_number
+    # Convert to hexadecimal
+    hex_serial = format(decimal_serial, 'X')
+    # Ensure an even number of digits for correct byte representation
+    if len(hex_serial) % 2 != 0:
+        hex_serial = '0' + hex_serial
+    # Insert colons between every 2 characters
+    colon_separated_serial = ":".join(hex_serial[i:i+2] for i in range(0, len(hex_serial), 2))
+    return colon_separated_serial
