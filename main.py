@@ -27,41 +27,48 @@ class Controller(BaseHTTPRequestHandler):
 
     def sync(self, parent, children):
         uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain = self._get_parent_data(parent)
-        if self.path.endswith('/sync'):
-            cleanup_orphaned_certs(aws_resource_tags)
-            # Handle certificate requests
-            if (acm_arn is None or need_new_certificate(acm_arn, domains)) and custom_certificate_secret_store_path is None:
-                logger.info("Requesting a new certificate")
-                acm_arn = create_acm_certificate(domains, uid, aws_resource_tags)
-            elif (acm_arn is None or custom_certificate_secret_store_path is not None):
-                acm_arn = import_cert_to_acm(custom_certificate_secret_store_path, aws_resource_tags)
-                
-            certificate_status = check_certificate_validation(acm_arn)
-            status_dict["certificate_request"] = certificate_status
+        if "error_message" in status_dict:
+            status_dict = {}
+        try:
+            if self.path.endswith('/sync'):
+                cleanup_orphaned_certs(aws_resource_tags)
+                # Handle certificate requests
+                if custom_certificate_secret_store_path is None:
+                    if acm_arn is None or need_new_certificate(acm_arn, domains) or is_cert_imported(acm_arn):
+                        logger.info("Requesting a new certificate")
+                        acm_arn = create_acm_certificate(domains, uid, aws_resource_tags)
+                elif acm_arn is None or custom_certificate_secret_store_path is not None:
+                    acm_arn = import_cert_to_acm(custom_certificate_secret_store_path, aws_resource_tags)
+                    
+                certificate_status = check_certificate_validation(acm_arn)
+                status_dict["certificate_request"] = certificate_status
 
 
-            if status_dict["certificate_request"]["status"] == "ISSUED":
-                dist_request = status_dict.setdefault("distribution_request", {})
-                
-                if distribution_id is None:
-                    dist_request = create_distribution(
-                        origin_domain, acm_arn, None, domains, uid, aws_resource_tags=aws_resource_tags)
-                else:
-                    dist_request = get_live_distribution_status(distribution_id)
-
-                    if dist_request["status"] != "InProgress":
-                        update_distribution(distribution_id, origin_domain, acm_arn, None, domains)
+                if status_dict["certificate_request"]["status"] == "ISSUED":
+                    dist_request = status_dict.setdefault("distribution_request", {})
+                    
+                    if distribution_id is None:
+                        dist_request = create_distribution(
+                            origin_domain, acm_arn, None, domains, uid, aws_resource_tags=aws_resource_tags)
                     else:
-                        logger.info(
-                            f"There are updates in progress for DISTRIBUTION ID: {distribution_id}. Skipping updates.")
-                
-                status_dict["distribution_request"] = dist_request
+                        dist_request = get_live_distribution_status(distribution_id)
 
-        if self.path.endswith('/finalize'):
-            return self.finalize_hook(aws_resource_tags)
+                        if dist_request["status"] != "InProgress":
+                            update_distribution(distribution_id, origin_domain, acm_arn, None, domains)
+                        else:
+                            logger.info(
+                                f"There are updates in progress for DISTRIBUTION ID: {distribution_id}. Skipping updates.")
+                    
+                    status_dict["distribution_request"] = dist_request
 
-        return {"status": status_dict}
-
+            if self.path.endswith('/finalize'):
+                return self.finalize_hook(aws_resource_tags)
+            
+            return {"status": status_dict}
+        except Exception as e:
+            status_dict = {}
+            status_dict["error_message"] = str(e)
+            return {"status": status_dict}
 
     def finalize_hook(self, aws_resource_tags):
         try:

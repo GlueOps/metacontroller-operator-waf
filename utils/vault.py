@@ -1,5 +1,11 @@
 import requests
 import os
+from json_log_formatter import JsonFormatter
+import logging
+logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
+from utils.tools import *
+from utils.vault import *
+
 
 VAULT_ADDR = os.environ.get('VAULT_ADDR')
 K8S_ROLE = os.environ.get('K8S_ROLE')
@@ -27,6 +33,7 @@ def adjust_path(value):
     return value
 
 def get_data_from_vault(secret_path):
+    logger.info(f"Getting data from secret store (vault): {secret_path}")
     if not VAULT_TOKEN:
         vault_token = get_vault_token_via_kube_auth()
     else:

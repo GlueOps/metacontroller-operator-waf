@@ -19,7 +19,7 @@ def is_certificate_used(certificate_arn):
 
 
 def is_cert_is_old(certificate_arn):
-    acm = boto3.client('acm')
+    acm = create_aws_client('acm')
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
     created_date = certificate['Certificate']['CreatedAt']
     minutes = 43800
@@ -28,6 +28,12 @@ def is_cert_is_old(certificate_arn):
     old_certificate = (datetime.now(created_date.tzinfo) - created_date) > timedelta(minutes=minutes)
     logger.info(f"ACM ARN: {certificate_arn} was created more than {minutes} minutes ago: {old_certificate}")
     return old_certificate
+
+
+def is_cert_imported(certificate_arn):
+    acm = create_aws_client('acm')
+    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    return str(certificate['Certificate']['Type']).lower() == str('IMPORTED').lower()
 
 
 def cleanup_orphaned_certs(aws_resource_tags):
@@ -160,7 +166,7 @@ def get_cert_from_vault(secret_path):
 
 
 def get_serial_number(certificate_arn):
-    acm = boto3.client('acm')
+    acm = create_aws_client('acm')
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
     return certificate['Certificate']['Serial']
 
@@ -171,25 +177,18 @@ def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
     existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
     for cert_arn in existing_cert_arns:
         acm_serial_number = get_serial_number(cert_arn)
-        if serial_number_of_current_cert_from_secret_store == acm_serial_number:
+        if serial_number_of_current_cert_from_secret_store.lower() == acm_serial_number.lower():
             logger.info(f"Looks like the certificate from Vault {secret_path_in_vault} is already in AWS ACM as: {cert_arn}")
             return cert_arn
     
     logger.info(f"Looks like the certificate from Vault {secret_path_in_vault} is not in AWS ACM. It's not being imported.")
     acm = create_aws_client('acm')
     
-    if fullchain:
-        response = acm.import_certificate(
-            Certificate=cert,
-            PrivateKey=privatekey,
-            CertificateChain=fullchain,
-            Tags=aws_resource_tags
-        )
-    else:
-        response = acm.import_certificate(
-            Certificate=cert,
-            PrivateKey=privatekey,
-            Tags=aws_resource_tags
-        )
+    response = acm.import_certificate(
+        Certificate=cert,
+        PrivateKey=privatekey,
+        CertificateChain=fullchain,
+        Tags=aws_resource_tags
+    )
     
     return response['CertificateArn']

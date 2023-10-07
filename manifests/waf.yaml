@@ -1,14 +1,14 @@
----
-apiVersion: metacontroller.glueops.dev/v1alpha1
-kind: WebApplicationFirewall
-metadata:
-  name: example1
-  namespace: default
-spec:
-  domains:
-    - '15.aws-waf-testing.venkatamutyala.com'
+# ---
+# apiVersion: metacontroller.glueops.dev/v1alpha1
+# kind: WebApplicationFirewall
+# metadata:
+#   name: example1
+#   namespace: default
+# spec:
+#   domains:
+#     - '15.aws-waf-testing.venkatamutyala.com'
 
----
+# ---
 apiVersion: metacontroller.glueops.dev/v1alpha1
 kind: WebApplicationFirewall
 metadata:
@@ -16,14 +16,14 @@ metadata:
   namespace: default
 spec:
   domains:
-    - '16.aws-waf-testing.venkatamutyala.com'
-
+    - 'venkatamutyala.com'
+  custom_certificate_secret_store_path: "secret/glueops-venkatamutyala.com"
 ---
-apiVersion: metacontroller.glueops.dev/v1alpha1
-kind: WebApplicationFirewall
-metadata:
-  name: example3
-  namespace: default
-spec:
-  domains:
-    - '17.aws-waf-testing.venkatamutyala.com'
+# apiVersion: metacontroller.glueops.dev/v1alpha1
+# kind: WebApplicationFirewall
+# metadata:
+#   name: example3
+#   namespace: default
+# spec:
+#   domains:
+#     - '17.aws-waf-testing.venkatamutyala.com'
