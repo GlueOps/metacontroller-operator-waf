@@ -85,7 +85,7 @@ class Controller(BaseHTTPRequestHandler):
         aws_resource_tags = [
             {"Key": "kubernetes_resource_uid", "Value": uid},
             {"Key": "captain_domain",
-             "Value": os.environ.get('CAPTAIN_DOMAIN', 'local-development')}
+             "Value": os.environ.get('CAPTAIN_DOMAIN')}
         ]
         domains = parent.get("spec", {}).get("domains")
         provided_secret_cert_path = parent.get("spec", {}).get("provided_secret_cert_path")
