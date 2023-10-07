@@ -26,7 +26,7 @@ class Controller(BaseHTTPRequestHandler):
     semaphore = threading.Semaphore(100)
 
     def sync(self, parent, children):
-        uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id = self._get_parent_data(parent)
+        uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain = self._get_parent_data(parent)
         if self.path.endswith('/sync'):
             cleanup_orphaned_certs(aws_resource_tags)
             # Handle certificate requests
@@ -45,12 +45,12 @@ class Controller(BaseHTTPRequestHandler):
                 
                 if distribution_id is None:
                     dist_request = create_distribution(
-                        "yahoo.com", acm_arn, None, domains, uid, aws_resource_tags=aws_resource_tags)
+                        origin_domain, acm_arn, None, domains, uid, aws_resource_tags=aws_resource_tags)
                 else:
                     dist_request = get_live_distribution_status(distribution_id)
 
                     if dist_request["status"] != "InProgress":
-                        update_distribution(distribution_id, "yahoo.com", acm_arn, None, domains)
+                        update_distribution(distribution_id, origin_domain, acm_arn, None, domains)
                     else:
                         logger.info(
                             f"There are updates in progress for DISTRIBUTION ID: {distribution_id}. Skipping updates.")
@@ -80,11 +80,13 @@ class Controller(BaseHTTPRequestHandler):
     
     def _get_parent_data(self, parent):
         uid = parent.get("metadata").get("uid")
+        captain_domain = os.environ.get('CAPTAIN_DOMAIN')
         aws_resource_tags = [
             {"Key": "kubernetes_resource_uid", "Value": uid},
             {"Key": "captain_domain",
-             "Value": os.environ.get('CAPTAIN_DOMAIN')}
+             "Value": captain_domain}
         ]
+        origin_domain = f"ingress.{captain_domain}"
         domains = parent.get("spec", {}).get("domains")
         custom_certificate_secret_store_path = parent.get("spec", {}).get("custom_certificate_secret_store_path")
         status_dict = parent.get("status", {})
@@ -98,7 +100,7 @@ class Controller(BaseHTTPRequestHandler):
         if not does_distribution_exist(distribution_id):
             distribution_id = None
             
-        return uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id
+        return uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain
 
     def do_POST(self):
         try:
