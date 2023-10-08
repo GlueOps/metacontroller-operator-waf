@@ -1,12 +1,8 @@
-import boto3
-import time
-from datetime import datetime, timezone
 from deepdiff import DeepDiff
+from glueops.aws import *
+import glueops.logging
 
-from json_log_formatter import JsonFormatter
-import logging
-logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
-from utils.tools import *
+logger = glueops.logging.configure()
 
 
 

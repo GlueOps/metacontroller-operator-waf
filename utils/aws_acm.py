@@ -1,13 +1,12 @@
-import boto3
-import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from deepdiff import DeepDiff
-
-from json_log_formatter import JsonFormatter
-import logging
-logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
-from utils.tools import *
+from glueops.aws import *
 from utils.vault import *
+import glueops.logging
+import glueops.certificates
+
+
+logger = glueops.logging.configure()
 
 
 def is_certificate_used(cert_state):
@@ -48,63 +47,50 @@ def cleanup_orphaned_certs(aws_resource_tags):
 
 
 def create_acm_certificate(domains, uid, aws_resource_tags):
-    logging.info(f"Creating ACM certificate for: {domains} with tags: {aws_resource_tags}")
+    logger.info(f"Creating ACM certificate for: {domains} with tags: {aws_resource_tags}")
     if not domains:
         raise ValueError("At least one domain is required")
 
     main_domain = domains[0]
-
     alternative_names = domains[1:]
-
-    # change the region as needed
+    
     acm = create_aws_client('acm')
-    response = None
-    uid = str(uid)[:-10].replace('-','')
+    uid = str(uid)[:-10].replace('-', '')
 
-    try:
-        if len(alternative_names) == 0:
-            response = acm.request_certificate(
-                DomainName=main_domain,
-                ValidationMethod='DNS',  # this example is for DNS validation
-                # this should be a unique string value. This can be anything as long as it's the same per unique request. But probably just best to leave it hardcoded to glueops. If the same certificate gets requested in the same hour it'll help avoid duplicates
-                IdempotencyToken=uid,
-                Tags=aws_resource_tags
-            )
-        else:
-            response = acm.request_certificate(
-                DomainName=main_domain,
-                ValidationMethod='DNS',  # this example is for DNS validation
-                SubjectAlternativeNames=alternative_names,
-                # this should be a unique string value. This can be anything as long as it's the same per unique request. But probably just best to leave it hardcoded to glueops. If the same certificate gets requested in the same hour it'll help avoid duplicates
-                IdempotencyToken=uid,
-                Tags=aws_resource_tags
-            )
-        certificate_arn = response['CertificateArn']
-        logging.info(
-            f"Created ACM certificate for: {domains} and got ARN: {certificate_arn}")
+    # Prepare common request parameters
+    request_params = {
+        'DomainName': main_domain,
+        'ValidationMethod': 'DNS',
+        'IdempotencyToken': uid,
+        'Tags': aws_resource_tags
+    }
 
-        return certificate_arn
+    # If there are alternative names, add them to the request parameters
+    if alternative_names:
+        request_params['SubjectAlternativeNames'] = alternative_names
 
-    except Exception as e:
-        logger.exception(f"An error occurred: {e}")
-        return None
+    response = acm.request_certificate(**request_params)
+    
+    certificate_arn = response['CertificateArn']
+    logger.info(f"Created ACM certificate for: {domains} and got ARN: {certificate_arn}")
+
+    return certificate_arn
 
 
 def check_certificate_validation(certificate_arn):
     logger.info(f"Checking on ACM Certificate: {certificate_arn}")
     acm = create_aws_client('acm')
-    cert_details = acm.describe_certificate(CertificateArn=certificate_arn)
-    cert_details = cert_details['Certificate']
+    cert_details = acm.describe_certificate(CertificateArn=certificate_arn)['Certificate']
     # Check for expiration
-    overall_health = "UNKNOWN"
-    expiration_date = cert_details['NotAfter']
-    # Convert expiration_date to be offset-naive
-    expiration_date_naive = expiration_date.replace(tzinfo=None)
-    if expiration_date_naive - timedelta(days=45) <= datetime.utcnow():
-        overall_health = "NotHealthy"
+    if "NotAfter" in cert_details:
+        expiration_date_naive = cert_details['NotAfter'].replace(tzinfo=None)
+        if expiration_date_naive - timedelta(days=45) <= datetime.utcnow():
+            overall_health = "NotHealthy"
+        else:
+            overall_health = "Healthy"
 
     # Check for status
-    statuses_to_check = [
+    not_healthy_statuses = [
         "PENDING_VALIDATION",
         "REVOKED",
         "EXPIRED",
@@ -112,19 +98,17 @@ def check_certificate_validation(certificate_arn):
         "VALIDATION_TIMED_OUT",
         "RENEWING"
     ]
-    status = cert_details['Status']
-    if status in statuses_to_check:
+    if cert_details.get('Status') in not_healthy_statuses:
         overall_health = "NotHealthy"
-    elif status == "ISSUED" and overall_health == "UNKNOWN":
-        overall_health = "Healthy"
 
     return {
         "arn": certificate_arn,
-        "status": cert_details.get('Status', None),
-        "validations": cert_details.get('DomainValidationOptions', None),
-        "expiration_date": str(cert_details['NotAfter']),
+        "status": cert_details.get('Status'),
+        "validations": cert_details.get('DomainValidationOptions'),
+        "expiration_date": str(cert_details.get('NotAfter')),
         "Health": overall_health
     }
+
 
 
 def delete_acm_certificate(certificate_arn):
@@ -136,14 +120,18 @@ def delete_acm_certificate(certificate_arn):
 def delete_all_acm_certificates(aws_resource_tags):
     logger.info(f"Deleting all ACM Certificates with these tags: {aws_resource_tags}")
     arns_to_delete = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
+    
     for arn in arns_to_delete:
         delete_acm_certificate(arn)
-    if len(arns_to_delete) == 0:
-        logger.info(f"Finished deleting all ACM Certificates with these tags: {aws_resource_tags}")
-        return True
-    else:
+
+    if arns_to_delete:
         logger.info(f"Still deleting all ACM Certificates with these tags: {aws_resource_tags}")
         return False
+    else:
+        logger.info(f"Finished deleting all ACM Certificates with these tags: {aws_resource_tags}")
+        return True
+
+
         
         
 
@@ -198,18 +186,18 @@ def get_serial_number(certificate_arn):
 
 def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
     cert, privatekey, fullchain = get_cert_from_vault(secret_path_in_vault)
-    serial_number_of_current_cert_from_secret_store = extract_serial_number_from_cert_string(cert)
-    
+    cert_serial_number = glueops.certificates.extract_serial_number_from_cert_string(cert).lower()
+
     existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
+
     for cert_arn in existing_cert_arns:
-        acm_serial_number = get_serial_number(cert_arn)
-        if serial_number_of_current_cert_from_secret_store.lower() == acm_serial_number.lower():
-            logger.info(f"Looks like the certificate from Vault {secret_path_in_vault} is already in AWS ACM as: {cert_arn}")
+        if cert_serial_number == get_serial_number(cert_arn).lower():
+            logger.info(f"Certificate from Vault {secret_path_in_vault} already in AWS ACM as: {cert_arn}")
             return cert_arn
+
+    logger.info(f"Certificate from Vault {secret_path_in_vault} is not in AWS ACM. Importing...")
     
-    logger.info(f"Looks like the certificate from Vault {secret_path_in_vault} is not in AWS ACM. It's not being imported.")
     acm = create_aws_client('acm')
-    
     response = acm.import_certificate(
         Certificate=cert,
         PrivateKey=privatekey,

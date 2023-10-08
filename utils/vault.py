@@ -1,10 +1,9 @@
 import requests
 import os
-from json_log_formatter import JsonFormatter
-import logging
-logger = logging.getLogger('GLUEOPS_WAF_OPERATOR')
-from utils.tools import *
-from utils.vault import *
+import glueops.logging
+import glueops.certificates
+from fastapi import HTTPException
+logger = glueops.logging.configure()
 
 
 VAULT_ADDR = os.environ.get('VAULT_ADDR')
@@ -46,8 +45,11 @@ def get_data_from_vault(secret_path):
     if POMERIUM_COOKIE:
         headers["cookie"] = f"_pomerium={POMERIUM_COOKIE}"
 
-    response = requests.get(f"{VAULT_ADDR}/v1/{secret_path}", headers=headers, verify=False)
+    response = requests.get(f"{VAULT_ADDR}/v1/{secret_path}", headers=headers, verify=False, allow_redirects=False)
+    if response.headers.get('Location'):
+        raise HTTPException(status_code=400, detail=f"We got a redirect response when trying to read a secret from Vault. You are probably using pomerium or something went wrong in cluster and your token expired.")
+
     response_data = response.json().get('data').get('data')
     if not response_data:
-        raise Exception("Failed to retrieve certificate data from Vault.")
+        raise HTTPException(status_code=404, detail=f"Failed to retrieve certificate data from Vault.")
     return response_data
