@@ -172,13 +172,13 @@ def does_acm_cert_exist(certificate_arn):
 def get_cert_from_vault(secret_path):
     response = get_data_from_vault(secret_path)
     
-    certificate = response.get('certificate')
-    private_key = response.get('private_key')
-    certificate_chain = response.get('certificate_chain')
+    certificate = response.get('CERTIFICATE')
+    private_key = response.get('PRIVATE_KEY')
+    certificate_chain = response.get('CERTIFICATE_CHAIN')
         
     # Check if any value is None and raise an exception
     if None in [certificate, private_key, certificate_chain]:
-        raise ValueError("One or more values are missing from the response!")
+        raise ValueError("One or more values are missing from the response: CERTIFICATE, PRIVATE_KEY, CERTIFICATE_CHAIN")
 
         
     return certificate, private_key, certificate_chain
