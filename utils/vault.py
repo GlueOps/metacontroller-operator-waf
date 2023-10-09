@@ -51,8 +51,23 @@ def get_data_from_vault(secret_path):
     if response.headers.get('Location'):
         raise HTTPException(status_code=400, detail=f"We got a redirect response when trying to read a secret from Vault. You are probably using pomerium or something went wrong in cluster and your token expired.")
 
-    if not response_data:
-        raise HTTPException(status_code=404, detail=f"Failed to retrieve certificate data from Secret Store.")
-    response_data = response.json().get('data').get('data')
 
-    return response_data
+    # Check if the request itself was successful
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=f"Error from Vault: {response.text}")
+
+    # Attempt to parse the JSON response
+    try:
+        response_data = response.json()
+    except ValueError:
+        raise HTTPException(status_code=500, detail="Unexpected response format from Vault.")
+
+    # Check for the presence of 'data' key
+    if 'data' not in response_data:
+        raise HTTPException(status_code=404, detail="No 'data' key in Vault's response.")
+
+    actual_data = response_data['data'].get('data')
+    if not actual_data:
+        raise HTTPException(status_code=404, detail="Failed to retrieve certificate data from Secret Store.")
+
+    return actual_data
