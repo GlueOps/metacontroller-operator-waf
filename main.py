@@ -67,14 +67,12 @@ def sync(parent, children):
                     logger.info(f"There are updates in progress for DISTRIBUTION ID: {distribution_id}. Skipping updates.")
 
             status_dict["distribution_request"] = dist_request
-        logger.info(f"!!!!!PRINT STATUS: {status_dict}")
         
         return {"status": status_dict}
 
     except Exception as e:
         status_dict = {}
         status_dict["error_message"] = traceback.format_exc()
-        logger.info(f"!!!!!PRINT STATUS: {status_dict}")
         return {"status": status_dict}
 
 def finalize_hook(aws_resource_tags):
