@@ -36,6 +36,7 @@ async def finalize_endpoint(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 def sync(parent, children):    
+    status_dict = {}
     try:
         name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn = get_parent_data(parent)
         
