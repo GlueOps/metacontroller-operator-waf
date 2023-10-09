@@ -67,7 +67,7 @@ def sync(parent, children):
                     logger.info(f"There are updates in progress for DISTRIBUTION ID: {distribution_id}. Skipping updates.")
 
             status_dict["distribution_request"] = dist_request
-        if status_dict["certificate_request"]["status"] == "ISSUED" and dist_request["status"] == "Deployed":
+        if status_dict.get("certificate_request", {}).get("status") == "ISSUED" and dist_request.get("status") == "Deployed":
             status_dict["HEALTHY"] = "True"
         
         return {"status": status_dict}
