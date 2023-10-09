@@ -54,20 +54,19 @@ def get_data_from_vault(secret_path):
 
     # Check if the request itself was successful
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=f"Error from Vault: {response.status_code}")
+        raise Exception(f"Error from Secret Store: {response.status_code}")
 
     # Attempt to parse the JSON response
     try:
         response_data = response.json()
     except ValueError:
-        raise HTTPException(status_code=500, detail="Unexpected response format from Vault.")
-
-    # Check for the presence of 'data' key
+        raise Exception("Unexpected response format from Secret Store.")
+        
     if 'data' not in response_data:
-        raise HTTPException(status_code=404, detail="No 'data' key in Vault's response.")
+        raise Exception("Missing data.")
 
     actual_data = response_data['data'].get('data')
     if not actual_data:
-        raise HTTPException(status_code=404, detail="Failed to retrieve certificate data from Secret Store.")
+        raise Exception("Failed to get certificate from secret store")
 
     return actual_data
