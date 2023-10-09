@@ -172,11 +172,16 @@ def does_acm_cert_exist(certificate_arn):
 def get_cert_from_vault(secret_path):
     response = get_data_from_vault(secret_path)
     
-    cert = response.get('cert')
-    privatekey = response.get('privkey')
-    fullchain = response.get('fullchain')
+    certificate = response.get('certificate')
+    private_key = response.get('private_key')
+    certificate_chain = response.get('certificate_chain')
         
-    return cert, privatekey, fullchain
+    # Check if any value is None and raise an exception
+    if None in [certificate, private_key, certificate_chain]:
+        raise ValueError("One or more values are missing from the response!")
+
+        
+    return certificate, private_key, certificate_chain
 
 
 def get_serial_number(certificate_arn):
@@ -185,7 +190,7 @@ def get_serial_number(certificate_arn):
     return certificate['Certificate']['Serial']
 
 def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
-    cert, privatekey, fullchain = get_cert_from_vault(secret_path_in_vault)
+    certificate, private_key, certificate_chain = get_cert_from_vault(secret_path_in_vault)
     cert_serial_number = glueops.certificates.extract_serial_number_from_cert_string(cert).lower()
 
     existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
@@ -199,9 +204,9 @@ def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
     
     acm = create_aws_client('acm')
     response = acm.import_certificate(
-        Certificate=cert,
-        PrivateKey=privatekey,
-        CertificateChain=fullchain,
+        Certificate=certificate,
+        PrivateKey=private_key,
+        CertificateChain=certificate_chain,
         Tags=aws_resource_tags
     )
     
