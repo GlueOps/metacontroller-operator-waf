@@ -11,7 +11,6 @@ spec:
     shortNames:
     - waf
     - wafs
-    - yolos
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -31,15 +30,9 @@ spec:
                 type: array
                 items:
                   type: string
-                  immutable: true
+                  description: "Raw JSON string representation of the full AWS WAF WebACL definition"
               custom_certificate_secret_store_path:
                 type: string
+                description: "Raw JSON string representation of the full AWS WAF WebACL definition"
     subresources:
-     status: {}
-    # additionalPrinterColumns:
-    # - name: STATUS   # The column header
-    #   type: string
-    #   description: The status of the resource
-    #   jsonPath: .status.hello   # The json path to the field
-
-     
+      status: {}
