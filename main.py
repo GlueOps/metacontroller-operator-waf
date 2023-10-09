@@ -26,7 +26,7 @@ async def finalize_endpoint(request: Request):
         data = await request.json()
         parent = data["parent"]
         aws_resource_tags = [
-            {"Key": "kubernetes_resource_uid", "Value": parent["metadata"]["uid"]},
+            {"Key": "kubernetes_resource_name", "Value": parent["metadata"]["name"]},
             {"Key": "captain_domain", "Value": os.environ.get('CAPTAIN_DOMAIN')}
         ]
         print(aws_resource_tags)
@@ -35,7 +35,7 @@ async def finalize_endpoint(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 def sync(parent, children):
-    uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain = get_parent_data(parent)
+    name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain = get_parent_data(parent)
     
     if "error_message" in status_dict:
         status_dict = {}
@@ -46,7 +46,7 @@ def sync(parent, children):
         if custom_certificate_secret_store_path is None:
             if acm_arn is None or need_new_certificate(acm_arn, domains) or is_cert_imported(acm_arn):
                 logger.info("Requesting a new certificate")
-                acm_arn = create_acm_certificate(domains, uid, aws_resource_tags)
+                acm_arn = create_acm_certificate(domains, name, aws_resource_tags)
         elif acm_arn is None or custom_certificate_secret_store_path is not None:
             acm_arn = import_cert_to_acm(custom_certificate_secret_store_path, aws_resource_tags)
 
@@ -57,7 +57,7 @@ def sync(parent, children):
             dist_request = status_dict.setdefault("distribution_request", {})
 
             if distribution_id is None:
-                dist_request = create_distribution(origin_domain, acm_arn, None, domains, uid, aws_resource_tags=aws_resource_tags)
+                dist_request = create_distribution(origin_domain, acm_arn, None, domains, name, aws_resource_tags=aws_resource_tags)
             else:
                 dist_request = get_live_distribution_status(distribution_id)
 
@@ -94,10 +94,10 @@ def finalize_hook(aws_resource_tags):
         return {"finalized": False}
 
 def get_parent_data(parent):
-    uid = parent.get("metadata").get("uid")
+    name = parent.get("metadata").get("name")
     captain_domain = os.environ.get('CAPTAIN_DOMAIN')
     aws_resource_tags = [
-        {"Key": "kubernetes_resource_uid", "Value": uid},
+        {"Key": "kubernetes_resource_name", "Value": name},
         {"Key": "captain_domain", "Value": captain_domain}
     ]
     origin_domain = f"ingress.{captain_domain}"
@@ -112,4 +112,4 @@ def get_parent_data(parent):
     if not does_distribution_exist(distribution_id):
         distribution_id = None
 
-    return uid, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain
+    return name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain
