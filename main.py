@@ -73,7 +73,6 @@ def sync(parent, children):
         return {"status": status_dict}
 
     except Exception as e:
-        status_dict = {}
         status_dict["error_message"] = traceback.format_exc()
         status_dict["HEALTHY"] = "False"
         return {"status": status_dict}
