@@ -30,9 +30,9 @@ spec:
                 type: array
                 items:
                   type: string
-                  description: "Raw JSON string representation of the full AWS WAF WebACL definition"
+                  description: "List of domains we want to have on the cert. This should include the TLD and any subdomains. Wildcards are also allowed."
               custom_certificate_secret_store_path:
                 type: string
-                description: "Raw JSON string representation of the full AWS WAF WebACL definition"
+                description: "Optional. If you want to use a certificate instead of using one from AWS please feel free to import your own from vault. Ex. secret/ssl-antoniostacos.com"
     subresources:
       status: {}
