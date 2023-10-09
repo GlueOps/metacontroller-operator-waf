@@ -35,13 +35,12 @@ async def finalize_endpoint(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def sync(parent, children):
-    name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn = get_parent_data(parent)
-    
-    if "error_message" in status_dict:
-        status_dict = {}
-    
+def sync(parent, children):    
     try:
+        name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn = get_parent_data(parent)
+        
+        if "error_message" in status_dict:
+            status_dict = {}
         cleanup_orphaned_certs(aws_resource_tags)
 
         if custom_certificate_secret_store_path is None:
