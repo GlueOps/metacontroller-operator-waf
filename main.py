@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from utils.aws_acm import *
 from utils.aws_cloudfront import *
+from utils.aws_web_acl import *
 from utils.vault import *
 import glueops.logging
 import glueops.certificates
@@ -35,7 +36,7 @@ async def finalize_endpoint(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 def sync(parent, children):
-    name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain = get_parent_data(parent)
+    name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn = get_parent_data(parent)
     
     if "error_message" in status_dict:
         status_dict = {}
@@ -57,12 +58,12 @@ def sync(parent, children):
             dist_request = status_dict.setdefault("distribution_request", {})
 
             if distribution_id is None:
-                dist_request = create_distribution(origin_domain, acm_arn, None, domains, name, aws_resource_tags=aws_resource_tags)
+                dist_request = create_distribution(origin_domain, acm_arn, web_acl_arn, domains, name, aws_resource_tags=aws_resource_tags)
             else:
                 dist_request = get_live_distribution_status(distribution_id)
 
                 if dist_request["status"] != "InProgress":
-                    update_distribution(distribution_id, origin_domain, acm_arn, None, domains)
+                    update_distribution(distribution_id, origin_domain, acm_arn, web_acl_arn, domains)
                 else:
                     logger.info(f"There are updates in progress for DISTRIBUTION ID: {distribution_id}. Skipping updates.")
 
@@ -103,6 +104,8 @@ def get_parent_data(parent):
     origin_domain = f"ingress.{captain_domain}"
     domains = parent.get("spec", {}).get("domains")
     custom_certificate_secret_store_path = parent.get("spec", {}).get("custom_certificate_secret_store_path")
+    web_acl_name = parent.get("spec", {}).get("web_acl_name")
+    web_acl_arn = get_webacl_arn_from_name(web_acl_name)
     status_dict = parent.get("status", {})
     acm_arn = status_dict.get("certificate_request", {}).get("arn", None)
     distribution_id = status_dict.get("distribution_request", {}).get("distribution_id", None)
@@ -112,4 +115,4 @@ def get_parent_data(parent):
     if not does_distribution_exist(distribution_id):
         distribution_id = None
 
-    return name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain
+    return name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn
