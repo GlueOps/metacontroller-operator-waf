@@ -191,7 +191,7 @@ def get_serial_number(certificate_arn):
 
 def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
     certificate, private_key, certificate_chain = get_cert_from_vault(secret_path_in_vault)
-    cert_serial_number = glueops.certificates.extract_serial_number_from_cert_string(cert).lower()
+    cert_serial_number = glueops.certificates.extract_serial_number_from_cert_string(certificate).lower()
 
     existing_cert_arns = get_resource_arns_using_tags(aws_resource_tags, ['acm:certificate'])
 
