@@ -54,7 +54,7 @@ def get_data_from_vault(secret_path):
 
     # Check if the request itself was successful
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=f"Error from Vault: {response.text}")
+        raise HTTPException(status_code=response.status_code, detail=f"Error from Vault: {response.status_code}")
 
     # Attempt to parse the JSON response
     try:
