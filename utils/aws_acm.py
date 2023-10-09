@@ -46,7 +46,7 @@ def cleanup_orphaned_certs(aws_resource_tags):
                 delete_acm_certificate(existing_cert_arn)
 
 
-def create_acm_certificate(domains, uid, aws_resource_tags):
+def create_acm_certificate(domains, name, aws_resource_tags):
     logger.info(f"Creating ACM certificate for: {domains} with tags: {aws_resource_tags}")
     if not domains:
         raise ValueError("At least one domain is required")
@@ -55,13 +55,12 @@ def create_acm_certificate(domains, uid, aws_resource_tags):
     alternative_names = domains[1:]
     
     acm = create_aws_client('acm')
-    uid = str(uid)[:-10].replace('-', '')
 
     # Prepare common request parameters
     request_params = {
         'DomainName': main_domain,
         'ValidationMethod': 'DNS',
-        'IdempotencyToken': uid,
+        'IdempotencyToken': name,
         'Tags': aws_resource_tags
     }
 
