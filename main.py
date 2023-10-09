@@ -105,7 +105,9 @@ def get_parent_data(parent):
     domains = parent.get("spec", {}).get("domains")
     custom_certificate_secret_store_path = parent.get("spec", {}).get("custom_certificate_secret_store_path")
     web_acl_name = parent.get("spec", {}).get("web_acl_name")
-    web_acl_arn = get_webacl_arn_from_name(web_acl_name)
+    web_acl_arn = None
+    if web_acl_name:
+        web_acl_arn = get_webacl_arn_from_name(web_acl_name)
     status_dict = parent.get("status", {})
     acm_arn = status_dict.get("certificate_request", {}).get("arn", None)
     distribution_id = status_dict.get("distribution_request", {}).get("distribution_id", None)
