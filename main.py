@@ -67,6 +67,8 @@ def sync(parent, children):
                     logger.info(f"There are updates in progress for DISTRIBUTION ID: {distribution_id}. Skipping updates.")
 
             status_dict["distribution_request"] = dist_request
+        if status_dict["certificate_request"]["status"] == "ISSUED" and dist_request["status"] == "Deployed":
+            status_dict["HEALTHY"] = "True"
         
         return {"status": status_dict}
 
@@ -104,7 +106,7 @@ def get_parent_data(parent):
     status_dict = parent.get("status", {})
     acm_arn = status_dict.get("certificate_request", {}).get("arn", None)
     distribution_id = status_dict.get("distribution_request", {}).get("distribution_id", None)
-
+    status_dict["HEALTHY"] = "False"
     if not does_acm_cert_exist(acm_arn):
         acm_arn = None
     if not does_distribution_exist(distribution_id):
