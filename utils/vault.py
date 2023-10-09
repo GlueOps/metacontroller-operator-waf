@@ -22,8 +22,7 @@ def get_vault_token_via_kube_auth():
         "role": K8S_ROLE
     }
     response = requests.post(f"{VAULT_ADDR}/v1/auth/kubernetes/login", json=payload, verify=False)
-    if response.status_code != 200:
-        raise Exception("Failed to authenticate with Vault using Kubernetes auth.")
+    response.raise_for_status()
     return response.json()["auth"]["client_token"]
 
 def adjust_path(value):
