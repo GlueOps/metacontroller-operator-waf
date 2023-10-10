@@ -1,9 +1,11 @@
 from deepdiff import DeepDiff
-from glueops.aws import *
-import glueops.logging
+import glueops.aws
+import glueops.setup_logging
+import os
 
-logger = glueops.logging.configure()
-
+log_level = getattr(glueops.setup_logging,
+                    os.environ.get('LOG_LEVEL', 'WARNING'))
+logger = glueops.setup_logging.configure(log_level=log_level)
 
 
 def get_distribution_id_from_arn(arn):
@@ -17,27 +19,30 @@ def get_distribution_id_from_arn(arn):
 
 
 def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, domains, resource_uid, aws_resource_tags):
-    existing_distribution_arns = get_resource_arns_using_tags(aws_resource_tags, ['cloudfront:distribution'])
+    existing_distribution_arns = glueops.aws.get_resource_arns_using_tags(
+        aws_resource_tags, ['cloudfront:distribution'])
     if len(existing_distribution_arns) > 1:
-        logger.exception("Something is wrong. There isn't a situation where we should have two distributions with the same tags. This requires manual cleanup.")
+        logger.exception(
+            "Something is wrong. There isn't a situation where we should have two distributions with the same tags. This requires manual cleanup.")
     for existing_distribution_arn in existing_distribution_arns:
-        existing_distribution_id = get_distribution_id_from_arn(existing_distribution_arn)
+        existing_distribution_id = get_distribution_id_from_arn(
+            existing_distribution_arn)
         return get_live_distribution_status(existing_distribution_id)
-            
-            
+
     logger.info(f"Creating distribution for: {domains}")
-    cdn = create_aws_client('cloudfront')
-    DistributionConfigWithTags = { "DistributionConfig" : create_distribution_config(
+    cdn = glueops.aws.create_aws_client('cloudfront')
+    DistributionConfigWithTags = {"DistributionConfig": create_distribution_config(
         domains, origin_domain_name, acm_certificate_arn, web_acl_id, caller_reference=resource_uid),
-                                  "Tags" : { "Items": aws_resource_tags }
-                                  }
-    response = cdn.create_distribution_with_tags(DistributionConfigWithTags=DistributionConfigWithTags)
+        "Tags": {"Items": aws_resource_tags}
+    }
+    response = cdn.create_distribution_with_tags(
+        DistributionConfigWithTags=DistributionConfigWithTags)
     state = parse_distribution_state(response)
     return state
 
 
 def update_distribution(distribution_id, origin_domain_name, acm_certificate_arn, web_acl_id, domains):
-    cdn = create_aws_client('cloudfront')
+    cdn = glueops.aws.create_aws_client('cloudfront')
     response = get_live_distribution_config(distribution_id)
     config = response['DistributionConfig']
     etag = response['ETag']
@@ -60,14 +65,15 @@ def update_distribution(distribution_id, origin_domain_name, acm_certificate_arn
 
 def get_live_distribution_status(distribution_id):
     logger.info(f"Getting Distribution status: {distribution_id}")
-    client = create_aws_client('cloudfront')
+    client = glueops.aws.create_aws_client('cloudfront')
     response = client.get_distribution(Id=distribution_id)
     return parse_distribution_state(response)
 
 
 def parse_distribution_state(distribution_details):
     logger.info(f"Parsing distribution_state: {distribution_details}")
-    dist_status = distribution_details.get('Distribution', {}).get('Status', None)
+    dist_status = distribution_details.get(
+        'Distribution', {}).get('Status', None)
     health = "UNKOWN"
     if "Deployed" == dist_status:
         health = "Healthy"
@@ -91,7 +97,8 @@ def does_distribution_exist(distribution_id):
     try:
         get_live_distribution_config(distribution_id)
     except Exception as e:
-        logger.error(f"While checking to see if distribution exists {distribution_id} the following error returned: {e}")
+        logger.error(
+            f"While checking to see if distribution exists {distribution_id} the following error returned: {e}")
         return False
     return True
 
@@ -99,14 +106,14 @@ def does_distribution_exist(distribution_id):
 def get_live_distribution_config(distribution_id):
     logger.info(
         f"Getting current status of Distribution ID: {distribution_id}")
-    client = create_aws_client('cloudfront')
+    client = glueops.aws.create_aws_client('cloudfront')
     response = client.get_distribution_config(Id=distribution_id)
     return response
 
 
 def disable_distribution(distribution_id, acm_arn):
     logger.info(f"Disabling Distribution ID: {distribution_id}")
-    client = create_aws_client('cloudfront')
+    client = glueops.aws.create_aws_client('cloudfront')
     config = get_live_distribution_config(distribution_id)
     etag = config['ETag']
     config = create_distribution_config(
@@ -120,7 +127,7 @@ def disable_distribution(distribution_id, acm_arn):
 def delete_distribution(distribution_id):
     logger.info(
         f"Starting/Checking on deletion of Distribution ID: {distribution_id}")
-    client = create_aws_client('cloudfront')
+    client = glueops.aws.create_aws_client('cloudfront')
     state = get_live_distribution_status(distribution_id)
     config = get_live_distribution_config(distribution_id)
     etag = config['ETag']
@@ -137,18 +144,22 @@ def delete_distribution(distribution_id):
 
 
 def delete_all_cloudfront_distributions(aws_resource_tags):
-    logger.info(f"Deleting all CloudFront distributions with these tags: {aws_resource_tags}")
-    arns_to_delete = get_resource_arns_using_tags(aws_resource_tags, ['cloudfront:distribution'])
+    logger.info(
+        f"Deleting all CloudFront distributions with these tags: {aws_resource_tags}")
+    arns_to_delete = glueops.aws.get_resource_arns_using_tags(
+        aws_resource_tags, ['cloudfront:distribution'])
     for arn in arns_to_delete:
         id = get_distribution_id_from_arn(arn)
         delete_distribution(distribution_id=id)
     if len(arns_to_delete) == 0:
-        logger.info(f"Finished all CloudFront distributions with these tags: {aws_resource_tags}")
+        logger.info(
+            f"Finished all CloudFront distributions with these tags: {aws_resource_tags}")
         return True
     else:
-        logger.info(f"Still deleting all CloudFront distributions with these tags: {aws_resource_tags}")
+        logger.info(
+            f"Still deleting all CloudFront distributions with these tags: {aws_resource_tags}")
         return False
-        
+
 
 def create_distribution_config(domains, glueops_cluster_ingress_domain, acm_arn, web_acl_id=None, caller_reference=None):
     logger.info(f"Creating a Distribution config for: {domains}")

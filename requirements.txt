@@ -1,4 +1,4 @@
-glueops-helpers @ https://github.com/GlueOps/python-glueops-helpers-library/archive/refs/tags/v0.0.11.zip
+glueops-helpers @ https://github.com/GlueOps/python-glueops-helpers-library/archive/refs/tags/v0.1.1.zip
 fastapi==0.103.2
 uvicorn[standard]==0.23.2
 gunicorn==21.2.0
