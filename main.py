@@ -7,9 +7,7 @@ import traceback
 import glueops.setup_logging
 import os
 
-log_level = getattr(glueops.setup_logging,
-                    os.environ.get('LOG_LEVEL', 'WARNING'))
-logger = glueops.setup_logging.configure(log_level=log_level)
+logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
 
 app = FastAPI()
 
