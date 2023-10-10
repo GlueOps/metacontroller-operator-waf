@@ -2,9 +2,9 @@ from glueops.aws import *
 import glueops.setup_logging
 import os
 
-log_level = getattr(glueops.setup_logging,
+log_level = getattr(glueops.setup_logging.logging,
                     os.environ.get('LOG_LEVEL', 'WARNING'))
-logger = glueops.setup_logging.configure(log_level=log_level)
+logger = glueops.setup_logging.configure(level=log_level)
 
 
 def get_webacl_arn_from_name(name, scope='CLOUDFRONT'):
