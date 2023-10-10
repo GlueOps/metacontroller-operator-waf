@@ -1,0 +1,1 @@
+If you want to validate a working configuration you have in terraform the easiest way would be to import it back in using terraform import. See the main.tf and be sure to use the proper WAF aws creds and point to us-east-1 when using it.
