@@ -67,7 +67,7 @@ def create_acm_certificate(domains, name, aws_resource_tags):
     request_params = {
         'DomainName': main_domain,
         'ValidationMethod': 'DNS',
-        'IdempotencyToken': name.replace('-','').replace('.',''),
+        'IdempotencyToken': name,
         'Tags': aws_resource_tags
     }
 
