@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 import utils.aws_acm
 import utils.aws_cloudfront
 import utils.aws_web_acl
+import glueops.checksum_tools
 import glueops.certificates
 import traceback
 import glueops.setup_logging
@@ -43,7 +44,7 @@ async def finalize_endpoint(request: Request):
 def sync(parent, children):
     status_dict = {}
     try:
-        name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn = get_parent_data(
+        name, name_hashed, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn = get_parent_data(
             parent)
 
         if "error_message" in status_dict:
@@ -54,7 +55,7 @@ def sync(parent, children):
             if acm_arn is None or utils.aws_acm.need_new_certificate(acm_arn, domains) or utils.aws_acm.is_cert_imported(acm_arn):
                 logger.info("Requesting a new certificate")
                 acm_arn = utils.aws_acm.create_acm_certificate(
-                    domains, name, aws_resource_tags)
+                    domains, name_hashed, aws_resource_tags)
         elif acm_arn is None or custom_certificate_secret_store_path is not None:
             acm_arn = utils.aws_acm.import_cert_to_acm(
                 custom_certificate_secret_store_path, aws_resource_tags)
@@ -68,7 +69,7 @@ def sync(parent, children):
 
             if distribution_id is None:
                 dist_request = utils.aws_cloudfront.create_distribution(
-                    origin_domain, acm_arn, web_acl_arn, domains, name, aws_resource_tags=aws_resource_tags)
+                    origin_domain, acm_arn, web_acl_arn, domains, name_hashed, aws_resource_tags=aws_resource_tags)
             else:
                 dist_request = utils.aws_cloudfront.get_live_distribution_status(
                     distribution_id)
@@ -114,6 +115,8 @@ def finalize_hook(aws_resource_tags):
 
 def get_parent_data(parent):
     name = parent.get("metadata").get("name")
+    #32 character hash
+    name_hashed = glueops.checksum_tools.compute_sha224(name)[:32]
     captain_domain = os.environ.get('CAPTAIN_DOMAIN')
     aws_resource_tags = [
         {"Key": "kubernetes_resource_name", "Value": name},
@@ -137,4 +140,4 @@ def get_parent_data(parent):
     if not utils.aws_cloudfront.does_distribution_exist(distribution_id):
         distribution_id = None
 
-    return name, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn
+    return name, name_hashed, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn

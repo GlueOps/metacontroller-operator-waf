@@ -17,7 +17,7 @@ def get_distribution_id_from_arn(arn):
     return None
 
 
-def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, domains, resource_uid, aws_resource_tags):
+def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, domains, name_hashed, aws_resource_tags):
     existing_distribution_arns = glueops.aws.get_resource_arns_using_tags(
         aws_resource_tags, ['cloudfront:distribution'])
     if len(existing_distribution_arns) > 1:
@@ -31,7 +31,7 @@ def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, dom
     logger.info(f"Creating distribution for: {domains}")
     cdn = glueops.aws.create_aws_client('cloudfront')
     DistributionConfigWithTags = {"DistributionConfig": create_distribution_config(
-        domains, origin_domain_name, acm_certificate_arn, web_acl_id, caller_reference=resource_uid),
+        domains, origin_domain_name, acm_certificate_arn, web_acl_id, caller_reference=name_hashed),
         "Tags": {"Items": aws_resource_tags}
     }
     response = cdn.create_distribution_with_tags(

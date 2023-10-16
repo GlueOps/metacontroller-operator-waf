@@ -52,7 +52,7 @@ def cleanup_orphaned_certs(aws_resource_tags):
                 delete_acm_certificate(existing_cert_arn)
 
 
-def create_acm_certificate(domains, name, aws_resource_tags):
+def create_acm_certificate(domains, name_hashed, aws_resource_tags):
     logger.info(
         f"Creating ACM certificate for: {domains} with tags: {aws_resource_tags}")
     if not domains:
@@ -67,7 +67,7 @@ def create_acm_certificate(domains, name, aws_resource_tags):
     request_params = {
         'DomainName': main_domain,
         'ValidationMethod': 'DNS',
-        'IdempotencyToken': name.replace('-','').replace('.',''),
+        'IdempotencyToken': name_hashed,
         'Tags': aws_resource_tags
     }
 
