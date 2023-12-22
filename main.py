@@ -18,7 +18,7 @@ app = FastAPI()
 async def sync_endpoint(request: Request):
     try:
         observed = await request.json()
-        desired = await asyncio.to_thread(sync(observed["parent"], observed["children"]))
+        desired = await asyncio.to_thread(sync, observed["parent"], observed["children"])
         return desired
     except Exception as e:
         print(traceback.format_exc())
@@ -40,7 +40,7 @@ async def finalize_endpoint(request: Request):
                 "Value": os.environ.get('CAPTAIN_DOMAIN')}
         ]
         print(aws_resource_tags)
-        return await asyncio.to_thread(finalize_hook(aws_resource_tags))
+        return await asyncio.to_thread(finalize_hook, aws_resource_tags)
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=traceback.format_exc())
