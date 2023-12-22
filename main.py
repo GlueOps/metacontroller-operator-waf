@@ -22,6 +22,9 @@ async def sync_endpoint(request: Request):
         return desired
     except Exception as e:
         print(traceback.format_exc())
+        logger.info(f"sync type: {type(sync)}")
+        logger.info(f"observed['parent']: {observed['parent']}")
+        logger.info(f"observed['children']: {observed['children']}")
         raise HTTPException(status_code=500, detail=traceback.format_exc())
 
 
