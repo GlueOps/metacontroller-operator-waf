@@ -18,12 +18,11 @@ app = FastAPI()
 async def sync_endpoint(request: Request):
     try:
         observed = await request.json()
-        desired = await asyncio.to_thread(sync(observed["parent"]))
-        observed["children"] = None
+        desired = await asyncio.to_thread(sync(observed["parent"], observed["children"]))
         return desired
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=traceback.format_exc())
 
 
 @app.post("/finalize")
@@ -40,10 +39,10 @@ async def finalize_endpoint(request: Request):
         print(aws_resource_tags)
         return await asyncio.to_thread(finalize_hook(aws_resource_tags))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=traceback.format_exc())
 
 
-def sync(parent):
+def sync(parent, children):
     status_dict = {}
     try:
         name, name_hashed, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn = get_parent_data(
