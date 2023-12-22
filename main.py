@@ -18,7 +18,8 @@ app = FastAPI()
 async def sync_endpoint(request: Request):
     try:
         observed = await request.json()
-        desired = await asyncio.to_thread(sync(observed["parent"], observed["children"]))
+        desired = await asyncio.to_thread(sync(observed["parent"]))
+        observed["children"] = None
         return desired
     except Exception as e:
         print(e)
@@ -42,7 +43,7 @@ async def finalize_endpoint(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def sync(parent, children):
+def sync(parent):
     status_dict = {}
     try:
         name, name_hashed, aws_resource_tags, domains, custom_certificate_secret_store_path, status_dict, acm_arn, distribution_id, origin_domain, web_acl_arn = get_parent_data(
