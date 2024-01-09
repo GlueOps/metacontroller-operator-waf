@@ -7,6 +7,7 @@ import glueops.certificates
 import traceback
 import glueops.setup_logging
 import os
+import asyncio
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
 
@@ -17,11 +18,11 @@ app = FastAPI()
 async def sync_endpoint(request: Request):
     try:
         observed = await request.json()
-        desired = sync(observed["parent"], observed["children"])
+        desired = await asyncio.to_thread(sync, observed["parent"], observed["children"])
         return desired
     except Exception as e:
-        print(e)
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=traceback.format_exc())
 
 
 @app.post("/finalize")
@@ -36,9 +37,10 @@ async def finalize_endpoint(request: Request):
                 "Value": os.environ.get('CAPTAIN_DOMAIN')}
         ]
         print(aws_resource_tags)
-        return finalize_hook(aws_resource_tags)
+        return await asyncio.to_thread(finalize_hook, aws_resource_tags)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=traceback.format_exc())
 
 
 def sync(parent, children):
