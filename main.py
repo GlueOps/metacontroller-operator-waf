@@ -1,3 +1,5 @@
+import newrelic.agent
+newrelic.agent.initialize('newrelic.ini')
 from fastapi import FastAPI, HTTPException, Request
 import utils.aws_acm
 import utils.aws_cloudfront
