@@ -1,6 +1,11 @@
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException, RedisBucket
 from redis import Redis
 import os
+import glueops.setup_logging
+
+logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'INFO'))
+
+
 
 
 class RateLimiterUtil:
@@ -14,6 +19,7 @@ class RateLimiterUtil:
         self.aws_acm_delete_certificate_limiter = self.create_limiter("ratelimit:aws:acm:deletecertificate", 5, Duration.SECOND)
 
     def try_acquire(self, limiter, item_key):
+        logger.info(f"Checking rate limit for: {item_key} ")
         limiter.try_acquire(item_key, raise_when_fail=True, max_delay=8000)
         return True
 
