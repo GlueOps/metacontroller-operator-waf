@@ -5,10 +5,12 @@ import utils.vault
 import glueops.certificates
 import glueops.setup_logging
 import os
+import utils.aws_rate_limiter
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
+REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379')
 
-
+limiter = utils.aws_rate_limiter.RateLimiterUtil(REDIS_CONNECTION)
 
 def is_certificate_used(cert_state):
     return cert_state['Certificate']['InUseBy']
@@ -16,6 +18,7 @@ def is_certificate_used(cert_state):
 
 def get_cert_state(certificate_arn):
     acm = glueops.aws.create_aws_client('acm')
+    limiter.allow_request_aws_acm_describe_certificate()
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
     return certificate
 
@@ -35,6 +38,7 @@ def is_cert_is_old(cert_state):
 
 def is_cert_imported(certificate_arn):
     acm = glueops.aws.create_aws_client('acm')
+    limiter.allow_request_aws_acm_describe_certificate()
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
     return str(certificate['Certificate']['Type']).lower() == str('IMPORTED').lower()
 
@@ -74,7 +78,7 @@ def create_acm_certificate(domains, name_hashed, aws_resource_tags):
     # If there are alternative names, add them to the request parameters
     if alternative_names:
         request_params['SubjectAlternativeNames'] = alternative_names
-
+    limiter.allow_request_aws_acm_request_certificate()
     response = acm.request_certificate(**request_params)
 
     certificate_arn = response['CertificateArn']
@@ -87,6 +91,7 @@ def create_acm_certificate(domains, name_hashed, aws_resource_tags):
 def check_certificate_validation(certificate_arn):
     logger.info(f"Checking on ACM Certificate: {certificate_arn}")
     acm = glueops.aws.create_aws_client('acm')
+    limiter.allow_request_aws_acm_describe_certificate()
     cert_details = acm.describe_certificate(
         CertificateArn=certificate_arn)['Certificate']
     # Check for expiration

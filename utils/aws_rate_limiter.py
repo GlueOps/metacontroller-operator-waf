@@ -2,10 +2,9 @@ from pyrate_limiter import Duration, Rate, Limiter, BucketFullException, RedisBu
 from redis import Redis
 import os
 
-REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379')
 
 class RateLimiterUtil:
-    def __init__(self, redis_url=REDIS_CONNECTION):
+    def __init__(self, redis_url):
         self.redis_client = Redis.from_url(redis_url)
 
         # Initialize AWS ACM limiters
