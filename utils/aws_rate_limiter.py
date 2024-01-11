@@ -20,7 +20,7 @@ class RateLimiterUtil:
 
     def try_acquire(self, limiter, item_key):
         logger.info(f"Checking rate limit for: {item_key} ")
-        limiter.try_acquire(item_key, raise_when_fail=True, max_delay=8000)
+        limiter.try_acquire(item_key)
         return True
 
     def create_limiter(self, key, rate, duration):
