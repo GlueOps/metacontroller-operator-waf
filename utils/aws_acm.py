@@ -6,6 +6,8 @@ import glueops.certificates
 import glueops.setup_logging
 import os
 import utils.aws_rate_limiter
+import RedisCache
+
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
 REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379')
@@ -17,9 +19,7 @@ def is_certificate_used(cert_state):
 
 
 def get_cert_state(certificate_arn):
-    acm = glueops.aws.create_aws_client('acm')
-    limiter.allow_request_aws_acm_describe_certificate()
-    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    certificate = describe_certificate(certificate_arn=certificate_arn)
     return certificate
 
 
@@ -37,9 +37,7 @@ def is_cert_is_old(cert_state):
 
 
 def is_cert_imported(certificate_arn):
-    acm = glueops.aws.create_aws_client('acm')
-    limiter.allow_request_aws_acm_describe_certificate()
-    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    certificate = describe_certificate(certificate_arn=certificate_arn)
     return str(certificate['Certificate']['Type']).lower() == str('IMPORTED').lower()
 
 
@@ -93,13 +91,11 @@ def create_acm_certificate(domains, name_hashed, aws_resource_tags):
 
 def find_certificate_by_domain(aws_resource_tags, domain, sans=None):
     logger.info(f"Searching for existing certificate with tags: {aws_resource_tags}")
-    acm = glueops.aws.create_aws_client('acm')
     existing_acm_arns = glueops.aws.get_resource_arns_using_tags(
         aws_resource_tags, ['acm:certificate'])
 
     for arn in existing_acm_arns:
-        limiter.allow_request_aws_acm_describe_certificate()
-        response = acm.describe_certificate(CertificateArn=arn)
+        response = describe_certificate(certificate_arn=arn)
         cert_details = response.get('Certificate', {})
         cert_domain = cert_details.get('DomainName')
         cert_sans = cert_details.get('SubjectAlternativeNames', [])
@@ -117,10 +113,7 @@ def find_certificate_by_domain(aws_resource_tags, domain, sans=None):
 
 def check_certificate_validation(certificate_arn):
     logger.info(f"Checking on ACM Certificate: {certificate_arn}")
-    acm = glueops.aws.create_aws_client('acm')
-    limiter.allow_request_aws_acm_describe_certificate()
-    cert_details = acm.describe_certificate(
-        CertificateArn=certificate_arn)['Certificate']
+    cert_details =  describe_certificate(certificate_arn=certificate_arn)['Certificate']
     # Check for expiration
     if "NotAfter" in cert_details:
         expiration_date_naive = cert_details['NotAfter'].replace(tzinfo=None)
@@ -178,11 +171,7 @@ def delete_all_acm_certificates(aws_resource_tags):
 def get_domains_from_existing_certificate(certificate_arn):
     logger.info(
         f"Get domains from existing ACM certificate: {certificate_arn}")
-    acm = glueops.aws.create_aws_client('acm')
-    limiter.allow_request_aws_acm_describe_certificate()
-    response = acm.describe_certificate(
-        CertificateArn=certificate_arn
-    )
+    response =  describe_certificate(certificate_arn=certificate_arn)
     domain_validations = response.get(
         'Certificate', {}).get('DomainValidationOptions', [])
     acm_domains = {validation.get('DomainName')
@@ -227,9 +216,7 @@ def get_cert_from_vault(secret_path):
 
 
 def get_serial_number(certificate_arn):
-    acm = glueops.aws.create_aws_client('acm')
-    limiter.allow_request_aws_acm_describe_certificate()
-    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    certificate = describe_certificate(certificate_arn=certificate_arn)
     return certificate['Certificate']['Serial']
 
 
@@ -260,3 +247,24 @@ def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
     )
 
     return response['CertificateArn']
+
+
+def describe_certificate(certificate_arn):
+    """Get the certificate details, with caching."""
+    # Try to get the cached data
+    r = RedisCache.RedisCache(redis_url=REDIS_CONNECTION)
+    
+    cached_data = raise.cache.get(certificate_arn)
+    if cached_data:
+        print("Retrieved from cache")
+        return cached_data
+    
+    # If not cached, fetch data from ACM
+    acm = glueops.aws.create_aws_client('acm')
+    limiter.allow_request_aws_acm_describe_certificate()
+    certificate_details = acm.describe_certificate(CertificateArn=certificate_arn)
+    
+    # Cache the result with a TTL
+    r.cache.set(certificate_arn, certificate_details, ttl=120)
+    print("Retrieved from ACM and cached")
+    return certificate_details
