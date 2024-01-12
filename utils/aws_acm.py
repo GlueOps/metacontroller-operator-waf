@@ -6,12 +6,12 @@ import glueops.certificates
 import glueops.setup_logging
 import os
 import utils.aws_rate_limiter
-import RedisCache
+import utils.RedisCache
 
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
 REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379')
-redis_client = RedisCache.RedisCache(redis_url=REDIS_CONNECTION)
+redis_client = utils.RedisCache.RedisCache(redis_url=REDIS_CONNECTION)
 
 limiter = utils.aws_rate_limiter.RateLimiterUtil(REDIS_CONNECTION)
 
