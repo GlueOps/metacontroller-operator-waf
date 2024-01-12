@@ -24,6 +24,7 @@ def is_certificate_used(cert_state):
         logger.debug(f"{certificate_details['CertificateArn']} is in use by: {usages}")
         return True
     else:
+        logger.debug(f"{certificate_details['CertificateArn']} is not used by anything yet: {usages}")
         return False
 
 
