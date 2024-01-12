@@ -18,7 +18,13 @@ redis_client = utils.RedisCache.RedisCache(redis_url=REDIS_CONNECTION)
 limiter = utils.aws_rate_limiter.RateLimiterUtil(REDIS_CONNECTION)
 
 def is_certificate_used(cert_state):
-    return cert_state['Certificate']['InUseBy']
+    certificate_details = cert_state['Certificate']
+    usages = certificate_details['InUseBy']
+    if len(usages) > 0:
+        logger.debug(f"{certificate_details['CertificateArn']} is in use by: {usages}")
+        return True
+    else:
+        return False
 
 
 def get_cert_state(certificate_arn):
