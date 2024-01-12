@@ -11,7 +11,7 @@ import pickle
 
 REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379')
 CACHE_TTL = os.environ.get('CACHE_TTL', '1')
-MAX_TTL_ORPHANED_CERTS = os.environ.get('MAX_TTL_ORPHANED_CERTS', '172800') #ACM Times out after 72 hours. This is set to 48 hours.
+MAX_TTL_ORPHANED_CERTS = int(os.environ.get('MAX_TTL_ORPHANED_CERTS', '172800')) #ACM Times out after 72 hours. This is set to 48 hours.
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
 redis_client = utils.RedisCache.RedisCache(redis_url=REDIS_CONNECTION)
