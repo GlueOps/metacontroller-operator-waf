@@ -61,32 +61,57 @@ def create_acm_certificate(domains, name_hashed, aws_resource_tags):
         f"Creating ACM certificate for: {domains} with tags: {aws_resource_tags}")
     if not domains:
         raise ValueError("At least one domain is required")
-
+    
     main_domain = domains[0]
     alternative_names = domains[1:]
+    
+    existing_arn = find_certificate_by_domain(aws_resource_tags=aws_resource_tags, domain=main_domain,sans=alternative_names)
+    if existing_arn is None:
+        acm = glueops.aws.create_aws_client('acm')
 
+        # Prepare common request parameters
+        request_params = {
+            'DomainName': main_domain,
+            'ValidationMethod': 'DNS',
+            'IdempotencyToken': name_hashed,
+            'Tags': aws_resource_tags
+        }
+
+        # If there are alternative names, add them to the request parameters
+        if alternative_names:
+            request_params['SubjectAlternativeNames'] = alternative_names
+        limiter.allow_request_aws_acm_request_certificate()
+        response = acm.request_certificate(**request_params)
+
+        certificate_arn = response['CertificateArn']
+        logger.info(
+            f"Created ACM certificate for: {domains} and got ARN: {certificate_arn}")
+        return certificate_arn
+    else:
+        return existing_arn
+
+def find_certificate_by_domain(aws_resource_tags, domain, sans=None):
+    logger.info(f"Searching for existing certificate with tags: {aws_resource_tags}")
     acm = glueops.aws.create_aws_client('acm')
+    existing_acm_arns = glueops.aws.get_resource_arns_using_tags(
+        aws_resource_tags, ['acm:certificate'])
 
-    # Prepare common request parameters
-    request_params = {
-        'DomainName': main_domain,
-        'ValidationMethod': 'DNS',
-        'IdempotencyToken': name_hashed,
-        'Tags': aws_resource_tags
-    }
-
-    # If there are alternative names, add them to the request parameters
-    if alternative_names:
-        request_params['SubjectAlternativeNames'] = alternative_names
-    limiter.allow_request_aws_acm_request_certificate()
-    response = acm.request_certificate(**request_params)
-
-    certificate_arn = response['CertificateArn']
-    logger.info(
-        f"Created ACM certificate for: {domains} and got ARN: {certificate_arn}")
-
-    return certificate_arn
-
+    for arn in existing_acm_arns:
+        limiter.allow_request_aws_acm_describe_certificate()
+        response = acm.describe_certificate(CertificateArn=arn)
+        cert_details = response.get('Certificate', {})
+        cert_domain = cert_details.get('DomainName')
+        cert_sans = cert_details.get('SubjectAlternativeNames', [])
+        cert_status = cert_details.get('Status')
+        if cert_status in [ 'PENDING_VALIDATION','ISSUED']:
+            if domain == cert_domain:
+                if sans:
+                    if all(san in cert_sans for san in sans):
+                        return arn
+                else:
+                    return arn
+    logger.info(f"No usable certificates found with tags: {aws_resource_tags}")
+    return None
 
 def check_certificate_validation(certificate_arn):
     logger.info(f"Checking on ACM Certificate: {certificate_arn}")
