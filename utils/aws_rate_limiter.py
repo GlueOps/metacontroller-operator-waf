@@ -27,6 +27,7 @@ class RateLimiterUtil:
             logger.info(f"Checking rate limit for: {item_key} ")
             while not limiter.try_acquire(item_key):
                 time.sleep(2)
+                logger.info(f"Rate limit hit for: {item_key}")
             return True
         except BucketFullException as err:
             logger.error(err)
@@ -42,7 +43,7 @@ class RateLimiterUtil:
         return Limiter(bucket, raise_when_fail=False, max_delay=120000) # 30s
 
     def allow_request_aws_acm_describe_certificate(self):
-        return self.check(self.aws_acm_describe_certificate_limiter, random())
+        return self.check(self.aws_acm_describe_certificate_limiter, "aws_acm_describe_certificate")
         
     def allow_request_aws_acm_import_certificate(self):
         return self.check(self.aws_acm_import_certificate_limiter, "aws_acm_import_certificate")
