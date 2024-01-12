@@ -268,5 +268,5 @@ def describe_certificate(certificate_arn):
     
     # Cache the result with a TTL
     redis_client.set(certificate_arn, pickle.dumps(certificate_details), ttl=CACHE_TTL)
-    print("Retrieved from ACM and cached")
+    logger.debug(f"Retrieved {certificate_arn} from ACM and cached with TTL: {CACHE_TTL}")
     return certificate_details
