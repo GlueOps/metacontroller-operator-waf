@@ -35,15 +35,22 @@ def get_cert_state(certificate_arn):
 
 def is_cert_is_old(cert_state):
     created_date = cert_state['Certificate']['CreatedAt']
-    minutes = round(MAX_TTL_ORPHANED_CERTS/60) 
+    minutes = round(MAX_TTL_ORPHANED_CERTS / 60) 
+
+    # Ensure current time and created_date are in the same timezone
+    current_time = datetime.now(created_date.tzinfo)
+    duration_since_creation = current_time - created_date
+
     # Check if the certificate is older than 'minutes'
     arn = cert_state['Certificate']['CertificateArn']
+    old_certificate = duration_since_creation > timedelta(minutes=minutes)
+
+    # Logging the information
     logger.info(f"Certificate ACM ARN: {arn} was created on: {created_date}")
-    old_certificate = (datetime.now(created_date.tzinfo) -
-                       created_date) > timedelta(minutes=minutes)
-    logger.info(
-        f"ACM ARN: {arn} was created more than {minutes} minutes ago: {old_certificate}")
+    logger.info(f"ACM ARN: {arn} was created more than {minutes} minutes ago: {old_certificate}")
+
     return old_certificate
+
 
 
 def is_cert_imported(certificate_arn):
