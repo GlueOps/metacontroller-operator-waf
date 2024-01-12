@@ -256,15 +256,40 @@ def describe_certificate(certificate_arn):
     
     cached_data = redis_client.get(certificate_arn)
     if cached_data:
-        print("Retrieved from cache")
-        return cached_data
+        logger.debug("Retrieved from cache")
+        return deserialize_datetime(cached_data)
     
     # If not cached, fetch data from ACM
     acm = glueops.aws.create_aws_client('acm')
     limiter.allow_request_aws_acm_describe_certificate()
     certificate_details = acm.describe_certificate(CertificateArn=certificate_arn)
     
+    # Convert all datetime objects to strings
+    for key, value in certificate_details.items():
+        if isinstance(value, datetime):
+            certificate_details[key] = serialize_datetime(value)
+    
     # Cache the result with a TTL
     redis_client.set(certificate_arn, certificate_details, ttl=120)
     print("Retrieved from ACM and cached")
     return certificate_details
+
+def serialize_datetime(obj):
+    """Serialize datetime objects to ISO 8601 format strings."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError("Type not serializable")
+
+
+def deserialize_datetime(dct):
+    """
+    Deserialize strings that match the ISO 8601 datetime format back into datetime objects.
+    """
+    for key, value in dct.items():
+        if isinstance(value, str):
+            try:
+                dct[key] = datetime.fromisoformat(value)
+            except ValueError:
+                # The string is not a datetime, do nothing
+                pass
+    return dct
