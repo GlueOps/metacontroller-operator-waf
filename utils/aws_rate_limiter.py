@@ -19,9 +19,15 @@ class RateLimiterUtil:
         self.aws_acm_delete_certificate_limiter = self.create_limiter("ratelimit:aws:acm:deletecertificate", 5, Duration.SECOND)
 
     def try_acquire(self, limiter, item_key):
-        logger.info(f"Checking rate limit for: {item_key} ")
-        limiter.try_acquire(item_key)
-        return True
+        try:
+            logger.info(f"Checking rate limit for: {item_key} ")
+            limiter.try_acquire(item_key)
+            return True
+        except BucketFullException as err:
+            logger.error(err)
+            logger.error(err.meta_info)
+            raise Exception(err.meta_info)
+        
 
     def create_limiter(self, key, rate, duration):
         bucket = RedisBucket.init([Rate(rate, duration)], self.redis_client, key)
