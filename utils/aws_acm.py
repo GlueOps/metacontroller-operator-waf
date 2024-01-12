@@ -10,10 +10,10 @@ import utils.RedisCache
 import pickle
 
 REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379')
-CACHE_TTL = os.environ.get('CACHE_TTL', '60')
+CACHE_TTL = os.environ.get('CACHE_TTL', '1')
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
-redis_client = utils.RedisCache.RedisCache(redis_url=REDIS_CONNECTION, ttl=CACHE_TTL)
+redis_client = utils.RedisCache.RedisCache(redis_url=REDIS_CONNECTION)
 limiter = utils.aws_rate_limiter.RateLimiterUtil(REDIS_CONNECTION)
 
 def is_certificate_used(cert_state):
@@ -267,6 +267,6 @@ def describe_certificate(certificate_arn):
     
     
     # Cache the result with a TTL
-    redis_client.set(certificate_arn, pickle.dumps(certificate_details), ttl=120)
+    redis_client.set(certificate_arn, pickle.dumps(certificate_details), ttl=CACHE_TTL)
     print("Retrieved from ACM and cached")
     return certificate_details

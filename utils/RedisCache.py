@@ -13,6 +13,6 @@ class RedisCache:
         """Retrieve data from the cache."""
         return self.client.get(key)
 
-    def set(self, key, value, ttl=60):
+    def set(self, key, value, ttl=1):
         """Save data to the cache with a TTL."""
         self.client.setex(key, ttl, value)
