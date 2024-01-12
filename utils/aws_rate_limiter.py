@@ -39,13 +39,13 @@ class RateLimiterUtil:
         return Limiter(bucket, raise_when_fail=True, max_delay=1000) # 1000ms
 
     def allow_request_aws_acm_describe_certificate(self):
-        return self.try_acquire(self.aws_acm_describe_certificate_limiter, "aws_acm_describe_certificate")
+        return self.delay_or_raise(self.aws_acm_describe_certificate_limiter, "aws_acm_describe_certificate")
         
     def allow_request_aws_acm_import_certificate(self):
-        return self.try_acquire(self.aws_acm_import_certificate_limiter, "aws_acm_import_certificate")
+        return self.delay_or_raise(self.aws_acm_import_certificate_limiter, "aws_acm_import_certificate")
 
     def allow_request_aws_acm_request_certificate(self):
-        return self.try_acquire(self.aws_acm_request_certificate_limiter, "aws_acm_request_certificate")
+        return self.delay_or_raise(self.aws_acm_request_certificate_limiter, "aws_acm_request_certificate")
         
     def allow_request_aws_acm_delete_certificate(self):
-        return self.try_acquire(self.aws_acm_delete_certificate_limiter, "aws_acm_delete_certificate")
+        return self.delay_or_raise(self.aws_acm_delete_certificate_limiter, "aws_acm_delete_certificate")
