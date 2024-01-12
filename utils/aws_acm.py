@@ -254,7 +254,7 @@ def describe_certificate(certificate_arn):
     """Get the certificate details, with caching."""
     # Try to get the cached data
     
-    cached_data = redis_client.cache.get(certificate_arn)
+    cached_data = redis_client.get(certificate_arn)
     if cached_data:
         print("Retrieved from cache")
         return cached_data
@@ -265,6 +265,6 @@ def describe_certificate(certificate_arn):
     certificate_details = acm.describe_certificate(CertificateArn=certificate_arn)
     
     # Cache the result with a TTL
-    redis_client.cache.set(certificate_arn, certificate_details, ttl=120)
+    redis_client.set(certificate_arn, certificate_details, ttl=120)
     print("Retrieved from ACM and cached")
     return certificate_details
