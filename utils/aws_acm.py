@@ -179,6 +179,7 @@ def get_domains_from_existing_certificate(certificate_arn):
     logger.info(
         f"Get domains from existing ACM certificate: {certificate_arn}")
     acm = glueops.aws.create_aws_client('acm')
+    limiter.allow_request_aws_acm_describe_certificate()
     response = acm.describe_certificate(
         CertificateArn=certificate_arn
     )
@@ -227,6 +228,7 @@ def get_cert_from_vault(secret_path):
 
 def get_serial_number(certificate_arn):
     acm = glueops.aws.create_aws_client('acm')
+    limiter.allow_request_aws_acm_describe_certificate()
     certificate = acm.describe_certificate(CertificateArn=certificate_arn)
     return certificate['Certificate']['Serial']
 
