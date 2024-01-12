@@ -32,7 +32,7 @@ class RateLimiterUtil:
         except Exception as e:
             logger.error(traceback.format_exc())
             logger.critical("Some unknown exception occured. Going to exit(1) now.")
-            sys.exit(1)
+            os._exit(1)
 
     def create_limiter(self, key, rate, duration):
         bucket = RedisBucket.init([Rate(rate, duration)], self.redis_client, key)
