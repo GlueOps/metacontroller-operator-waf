@@ -20,10 +20,10 @@ class RateLimiterUtil:
         self.aws_acm_request_certificate_limiter = self.create_limiter("ratelimit:aws:acm:requestcertificate", 5, Duration.SECOND)
         self.aws_acm_delete_certificate_limiter = self.create_limiter("ratelimit:aws:acm:deletecertificate", 5, Duration.SECOND)
 
-    def try_acquire(self, limiter, item_key):
+    def check(self, limiter, item_key):
         try:
             logger.info(f"Checking rate limit for: {item_key} ")
-            limiter.try_acquire(item_key)
+            limiter.delay_or_raise(item_key)
             return True
         except BucketFullException as err:
             logger.error(err)
@@ -39,13 +39,13 @@ class RateLimiterUtil:
         return Limiter(bucket, raise_when_fail=True, max_delay=1000) # 1000ms
 
     def allow_request_aws_acm_describe_certificate(self):
-        return self.delay_or_raise(self.aws_acm_describe_certificate_limiter, "aws_acm_describe_certificate")
+        return self.check(self.aws_acm_describe_certificate_limiter, "aws_acm_describe_certificate")
         
     def allow_request_aws_acm_import_certificate(self):
-        return self.delay_or_raise(self.aws_acm_import_certificate_limiter, "aws_acm_import_certificate")
+        return self.check(self.aws_acm_import_certificate_limiter, "aws_acm_import_certificate")
 
     def allow_request_aws_acm_request_certificate(self):
-        return self.delay_or_raise(self.aws_acm_request_certificate_limiter, "aws_acm_request_certificate")
+        return self.check(self.aws_acm_request_certificate_limiter, "aws_acm_request_certificate")
         
     def allow_request_aws_acm_delete_certificate(self):
-        return self.delay_or_raise(self.aws_acm_delete_certificate_limiter, "aws_acm_delete_certificate")
+        return self.check(self.aws_acm_delete_certificate_limiter, "aws_acm_delete_certificate")
