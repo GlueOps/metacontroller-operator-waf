@@ -110,6 +110,7 @@ def find_certificate_by_domain(aws_resource_tags, domain, sans=None):
                     if all(san in cert_sans for san in sans):
                         return arn
                 else:
+                    logger.info(f"Found existing certificate {arn} with tags: {aws_resource_tags}")
                     return arn
     logger.info(f"No usable certificates found with tags: {aws_resource_tags}")
     return None
