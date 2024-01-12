@@ -274,7 +274,10 @@ def describe_certificate(certificate_arn):
     cached_data = redis_client.get(certificate_arn)
     if cached_data:
         logger.debug(f"Retrieved {certificate_arn} from cache")
-        return pickle.loads(cached_data)
+        if cached_data['Certificate']['Status'] != "PENDING_VALIDATION":
+            return pickle.loads(cached_data)
+        else:
+            logger.debug(f"Refreshing cache for {certificate_arn} as it was PENDING_VALIDATION")
     
     # If not cached, fetch data from ACM
     acm = glueops.aws.create_aws_client('acm')
