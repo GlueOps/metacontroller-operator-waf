@@ -1,6 +1,6 @@
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException, RedisBucket
 from redis import ConnectionPool, Redis
-import os
+import sys
 import glueops.setup_logging
 import traceback
 
@@ -24,9 +24,13 @@ class RateLimiterUtil:
             logger.info(f"Checking rate limit for: {item_key} ")
             limiter.try_acquire(item_key)
             return True
+        except BucketFullException as err:
+            logger.error(err)
+            logger.error(err.meta_info)
         except Exception as e:
             logger.error(traceback.format_exc())
-            raise       
+            logger.critical("Some unknown exception occured. Going to exit(1) now.")
+            sys.exit(1)
 
     def create_limiter(self, key, rate, duration):
         bucket = RedisBucket.init([Rate(rate, duration)], self.redis_client, key)
