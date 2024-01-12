@@ -45,10 +45,11 @@ def is_cert_is_old(cert_state):
     arn = cert_state['Certificate']['CertificateArn']
     old_certificate = duration_since_creation > timedelta(minutes=minutes)
 
-    # Logging the information
-    logger.info(f"Certificate ACM ARN: {arn} was created on: {created_date}")
-    logger.info(f"ACM ARN: {arn} was created more than {minutes} minutes ago: {old_certificate}")
-
+    if old_certificate:
+        logger.info(f"ACM ARN: {arn} appears old. It was created on {created_date} more than {minutes} minutes ago")
+    else:
+        logger.info(f"ACM ARN: {arn} appears new. It was {created_date} less than {minutes} minutes ago")
+        
     return old_certificate
 
 
