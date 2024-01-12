@@ -1,5 +1,5 @@
 from pyrate_limiter import Duration, Rate, Limiter, BucketFullException, RedisBucket
-from redis import Redis
+from redis import ConnectionPool, Redis
 import os
 import glueops.setup_logging
 import traceback
@@ -11,7 +11,7 @@ logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'INFO
 
 class RateLimiterUtil:
     def __init__(self, redis_url):
-        self.redis_client = Redis.from_url(redis_url)
+        self.redis_client = Redis(connection_pool=ConnectionPool.from_url(redis_url))
 
         # Initialize AWS ACM limiters
         self.aws_acm_describe_certificate_limiter = self.create_limiter("ratelimit:aws:acm:describecertificate", 10, Duration.SECOND)
