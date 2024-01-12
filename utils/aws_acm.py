@@ -88,6 +88,7 @@ def create_acm_certificate(domains, name_hashed, aws_resource_tags):
             f"Created ACM certificate for: {domains} and got ARN: {certificate_arn}")
         return certificate_arn
     else:
+        logger.info(f"Found existing certificate that can be used: {existing_arn}")
         return existing_arn
 
 def find_certificate_by_domain(aws_resource_tags, domain, sans=None):
