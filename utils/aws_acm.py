@@ -11,6 +11,7 @@ import RedisCache
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
 REDIS_CONNECTION = os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379')
+redis_client = RedisCache.RedisCache(redis_url=REDIS_CONNECTION)
 
 limiter = utils.aws_rate_limiter.RateLimiterUtil(REDIS_CONNECTION)
 
@@ -252,9 +253,8 @@ def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
 def describe_certificate(certificate_arn):
     """Get the certificate details, with caching."""
     # Try to get the cached data
-    r = RedisCache.RedisCache(redis_url=REDIS_CONNECTION)
     
-    cached_data = raise.cache.get(certificate_arn)
+    cached_data = redis_client.cache.get(certificate_arn)
     if cached_data:
         print("Retrieved from cache")
         return cached_data
@@ -265,6 +265,6 @@ def describe_certificate(certificate_arn):
     certificate_details = acm.describe_certificate(CertificateArn=certificate_arn)
     
     # Cache the result with a TTL
-    r.cache.set(certificate_arn, certificate_details, ttl=120)
+    redis_client.cache.set(certificate_arn, certificate_details, ttl=120)
     print("Retrieved from ACM and cached")
     return certificate_details
