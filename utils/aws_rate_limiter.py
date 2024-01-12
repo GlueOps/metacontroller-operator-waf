@@ -27,6 +27,7 @@ class RateLimiterUtil:
         except BucketFullException as err:
             logger.error(err)
             logger.error(err.meta_info)
+            raise
         except Exception as e:
             logger.error(traceback.format_exc())
             logger.critical("Some unknown exception occured. Going to exit(1) now.")
