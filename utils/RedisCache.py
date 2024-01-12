@@ -7,7 +7,7 @@ from redis import ConnectionPool, Redis
 class RedisCache:
     def __init__(self, redis_namespace,redis_url=''):
         self.client = Redis(connection_pool=ConnectionPool.from_url(redis_url))
-        self.key_namespace = key_namespace
+        self.redis_namespace = redis_namespace
 
     def get(self, key):
         """Retrieve data from the cache."""
