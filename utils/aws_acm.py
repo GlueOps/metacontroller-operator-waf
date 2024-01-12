@@ -27,7 +27,7 @@ def get_cert_state(certificate_arn):
 
 def is_cert_is_old(cert_state):
     created_date = cert_state['Certificate']['CreatedAt']
-    minutes = 43800
+    minutes = 2880 #ACM Times out after 72 hours. This is set to 48 hours.
     # Check if the certificate is older than 'minutes'
     arn = cert_state['Certificate']['CertificateArn']
     logger.info(f"Certificate ACM ARN: {arn} was created on: {created_date}")
@@ -53,6 +53,7 @@ def cleanup_orphaned_certs(aws_resource_tags):
                 f"Leaving ACM ARN {existing_cert_arn} alone as it's in use.")
         else:
             if is_cert_is_old(cert_state):
+                logger.info(f"Deleting: {existing_cert_arn} Reason: Cert is not actively used or is old/expired")
                 delete_acm_certificate(existing_cert_arn)
 
 
@@ -257,7 +258,7 @@ def describe_certificate(certificate_arn):
     
     cached_data = redis_client.get(certificate_arn)
     if cached_data:
-        logger.debug("Retrieved from cache")
+        logger.debug(f"Retrieved {certificate_arn} from cache")
         return pickle.loads(cached_data)
     
     # If not cached, fetch data from ACM
