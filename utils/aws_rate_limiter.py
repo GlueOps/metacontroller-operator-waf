@@ -23,7 +23,7 @@ class RateLimiterUtil:
     def check(self, limiter, item_key):
         try:
             logger.info(f"Checking rate limit for: {item_key} ")
-            limiter.delay_or_raise(item_key)
+            limiter.try_acquire(item_key)
             return True
         except BucketFullException as err:
             logger.error(err)
