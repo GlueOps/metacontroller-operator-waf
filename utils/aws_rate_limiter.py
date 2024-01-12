@@ -36,7 +36,7 @@ class RateLimiterUtil:
 
     def create_limiter(self, key, rate, duration):
         bucket = RedisBucket.init([Rate(rate, duration)], self.redis_client, key)
-        return Limiter(bucket, raise_when_fail=True, max_delay=10000) # 10s
+        return Limiter(bucket, raise_when_fail=True, max_delay=1000) # 1000ms
 
     def allow_request_aws_acm_describe_certificate(self):
         return self.try_acquire(self.aws_acm_describe_certificate_limiter, "aws_acm_describe_certificate")
