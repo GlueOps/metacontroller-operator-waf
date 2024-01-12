@@ -3,6 +3,7 @@ from redis import ConnectionPool, Redis
 import sys
 import glueops.setup_logging
 import traceback
+import os
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'INFO'))
 
