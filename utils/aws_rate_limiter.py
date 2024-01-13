@@ -21,7 +21,11 @@ class RateLimiterUtil:
         self.aws_acm_import_certificate_limiter = self.create_limiter("ratelimit:aws:acm:importcertificate", 1, Duration.SECOND)
         self.aws_acm_request_certificate_limiter = self.create_limiter("ratelimit:aws:acm:requestcertificate", 5, Duration.SECOND)
         self.aws_acm_delete_certificate_limiter = self.create_limiter("ratelimit:aws:acm:deletecertificate", 5, Duration.SECOND)
-        self.aws_cloudfront_aws_cloudfront_shared_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_shared", 2, Duration.SECOND)
+        self.aws_cloudfront_get_distribution_config_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_get_distribution_config", 10, Duration.SECOND)
+        self.aws_cloudfront_delete_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_delete_distribution", 1, Duration.SECOND)
+        self.aws_cloudfront_create_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_create_distribution", 1, Duration.SECOND)
+        self.aws_cloudfront_update_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_update_distribution", 1, Duration.SECOND)
+        self.aws_cloudfront_get_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_get_distribution", 1, Duration.SECOND)
         
 
     def check(self, limiter, item_key):
@@ -56,5 +60,18 @@ class RateLimiterUtil:
     def allow_request_aws_acm_delete_certificate(self):
         return self.check(self.aws_acm_delete_certificate_limiter, "aws_acm_delete_certificate")
 
-    def allow_request_aws_cloudfront_shared(self):
-        return self.check(self.aws_cloudfront_aws_cloudfront_shared_limiter, "aws_cloudfront_shared")
+
+    def allow_request_aws_cloudfront_get_distribution_config(self):
+        return self.check(self.aws_cloudfront_get_distribution_config_limiter, "aws_cloudfront_get_distribution_config")
+    
+    def allow_request_aws_cloudfront_delete_distrubution(self):
+        return self.check(self.aws_cloudfront_delete_distribution_limiter, "aws_cloudfront_delete_distribution")
+
+    def allow_request_aws_cloudfront_create_distrubution(self):
+        return self.check(self.aws_cloudfront_create_distribution_limiter, "aws_cloudfront_create_distribution")
+
+    def allow_request_aws_cloudfront_update_distrubution(self):
+        return self.check(self.aws_cloudfront_update_distribution_limiter, "aws_cloudfront_update_distribution")
+
+    def allow_request_aws_cloudfront_get_distrubution(self):
+        return self.check(self.aws_cloudfront_get_distribution_limiter, "aws_cloudfront_get_distribution")
