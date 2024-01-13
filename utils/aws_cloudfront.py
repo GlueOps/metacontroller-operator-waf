@@ -31,10 +31,12 @@ def create_distribution(origin_domain_name, acm_certificate_arn, web_acl_id, dom
 
     logger.info(f"Creating distribution for: {domains}")
     cdn = glueops.aws.create_aws_client('cloudfront')
+    limiter.allow_request_aws_cloudfront_shared()
     DistributionConfigWithTags = {"DistributionConfig": create_distribution_config(
         domains, origin_domain_name, acm_certificate_arn, web_acl_id, caller_reference=name_hashed),
         "Tags": {"Items": aws_resource_tags}
     }
+    limiter.allow_request_aws_cloudfront_shared()
     response = cdn.create_distribution_with_tags(
         DistributionConfigWithTags=DistributionConfigWithTags)
     state = parse_distribution_state(response)
@@ -47,6 +49,7 @@ def update_distribution(distribution_id, origin_domain_name, acm_certificate_arn
     config = response['DistributionConfig']
     etag = response['ETag']
     caller_reference = response['DistributionConfig']['CallerReference']
+    limiter.allow_request_aws_cloudfront_shared()
     config_to_deploy = create_distribution_config(
         domains, origin_domain_name, acm_certificate_arn, web_acl_id, caller_reference)
 
@@ -59,6 +62,7 @@ def update_distribution(distribution_id, origin_domain_name, acm_certificate_arn
         if differences:
             logger.info(
                 f"Updating Distribution ID: {distribution_id} because of: {differences}")
+            limiter.allow_request_aws_cloudfront_shared()
             cdn.update_distribution(
                 DistributionConfig=config_to_deploy, Id=distribution_id, IfMatch=etag)
 
@@ -66,6 +70,7 @@ def update_distribution(distribution_id, origin_domain_name, acm_certificate_arn
 def get_live_distribution_status(distribution_id):
     logger.info(f"Getting Distribution status: {distribution_id}")
     client = glueops.aws.create_aws_client('cloudfront')
+    limiter.allow_request_aws_cloudfront_shared()
     response = client.get_distribution(Id=distribution_id)
     return parse_distribution_state(response)
 
@@ -107,7 +112,7 @@ def get_live_distribution_config(distribution_id):
     logger.info(
         f"Getting current status of Distribution ID: {distribution_id}")
     client = glueops.aws.create_aws_client('cloudfront')
-    limiter.allow_request_aws_cloudfront_get_distribution_config()
+    limiter.allow_request_aws_cloudfront_shared()
     response = client.get_distribution_config(Id=distribution_id)
     return response
 
@@ -139,6 +144,7 @@ def delete_distribution(distribution_id):
     if state["distribution_enabled"] == False and state["status"] != "InProgress":
         logger.info(state)
         logger.info(f"Deleting Distribution ID: {distribution_id}")
+        limiter.allow_request_aws_cloudfront_shared()
         client.delete_distribution(Id=distribution_id, IfMatch=etag)
         return True
     return False
