@@ -25,7 +25,7 @@ class RateLimiterUtil:
         self.aws_cloudfront_delete_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_delete_distribution", 1, Duration.SECOND)
         self.aws_cloudfront_create_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_create_distribution", 1, Duration.SECOND)
         self.aws_cloudfront_update_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_update_distribution", 1, Duration.SECOND)
-        self.aws_cloudfront_get_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_get_distribution", 1, Duration.SECOND)
+        self.aws_cloudfront_get_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_get_distribution", 10, Duration.SECOND)
         
 
     def check(self, limiter, item_key):
