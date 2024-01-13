@@ -5,37 +5,56 @@ import utils.vault
 import glueops.certificates
 import glueops.setup_logging
 import os
+import utils.aws_rate_limiter
+import utils.RedisCache
+import pickle
+
+CACHE_TTL = os.environ.get('CACHE_TTL', '1')
+MAX_TTL_ORPHANED_CERTS = int(os.environ.get('MAX_TTL_ORPHANED_CERTS', '172800')) #ACM Times out after 72 hours. This is set to 48 hours.
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
-
-
+redis_client = utils.RedisCache.RedisCache(redis_namespace="metacontroller-operator-waf", redis_url=os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379'))
+limiter = utils.aws_rate_limiter.RateLimiterUtil(redis_url=os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379'))
 
 def is_certificate_used(cert_state):
-    return cert_state['Certificate']['InUseBy']
+    certificate_details = cert_state['Certificate']
+    usages = certificate_details['InUseBy']
+    if len(usages) > 0:
+        logger.debug(f"{certificate_details['CertificateArn']} is in use by: {usages}")
+        return True
+    else:
+        logger.debug(f"{certificate_details['CertificateArn']} is not used by anything yet: {usages}")
+        return False
 
 
 def get_cert_state(certificate_arn):
-    acm = glueops.aws.create_aws_client('acm')
-    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    certificate = describe_certificate(certificate_arn=certificate_arn)
     return certificate
 
 
 def is_cert_is_old(cert_state):
     created_date = cert_state['Certificate']['CreatedAt']
-    minutes = 43800
+    minutes = round(MAX_TTL_ORPHANED_CERTS / 60) 
+
+    # Ensure current time and created_date are in the same timezone
+    current_time = datetime.now(created_date.tzinfo)
+    duration_since_creation = current_time - created_date
+
     # Check if the certificate is older than 'minutes'
     arn = cert_state['Certificate']['CertificateArn']
-    logger.info(f"Certificate ACM ARN: {arn} was created on: {created_date}")
-    old_certificate = (datetime.now(created_date.tzinfo) -
-                       created_date) > timedelta(minutes=minutes)
-    logger.info(
-        f"ACM ARN: {arn} was created more than {minutes} minutes ago: {old_certificate}")
+    old_certificate = duration_since_creation > timedelta(minutes=minutes)
+
+    if old_certificate:
+        logger.info(f"ACM ARN: {arn} appears old. It was created on {created_date} more than {minutes} minutes ago")
+    else:
+        logger.info(f"ACM ARN: {arn} appears new. It was {created_date} less than {minutes} minutes ago")
+        
     return old_certificate
 
 
+
 def is_cert_imported(certificate_arn):
-    acm = glueops.aws.create_aws_client('acm')
-    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    certificate = describe_certificate(certificate_arn=certificate_arn)
     return str(certificate['Certificate']['Type']).lower() == str('IMPORTED').lower()
 
 
@@ -49,6 +68,7 @@ def cleanup_orphaned_certs(aws_resource_tags):
                 f"Leaving ACM ARN {existing_cert_arn} alone as it's in use.")
         else:
             if is_cert_is_old(cert_state):
+                logger.info(f"Deleting: {existing_cert_arn} Reason: Cert is not actively used or is old/expired")
                 delete_acm_certificate(existing_cert_arn)
 
 
@@ -57,38 +77,61 @@ def create_acm_certificate(domains, name_hashed, aws_resource_tags):
         f"Creating ACM certificate for: {domains} with tags: {aws_resource_tags}")
     if not domains:
         raise ValueError("At least one domain is required")
-
+    
     main_domain = domains[0]
     alternative_names = domains[1:]
+    
+    existing_arn = find_certificate_by_domain(aws_resource_tags=aws_resource_tags, domain=main_domain,sans=alternative_names)
+    if existing_arn is None:
+        acm = glueops.aws.create_aws_client('acm')
 
-    acm = glueops.aws.create_aws_client('acm')
+        # Prepare common request parameters
+        request_params = {
+            'DomainName': main_domain,
+            'ValidationMethod': 'DNS',
+            'IdempotencyToken': name_hashed,
+            'Tags': aws_resource_tags
+        }
 
-    # Prepare common request parameters
-    request_params = {
-        'DomainName': main_domain,
-        'ValidationMethod': 'DNS',
-        'IdempotencyToken': name_hashed,
-        'Tags': aws_resource_tags
-    }
+        # If there are alternative names, add them to the request parameters
+        if alternative_names:
+            request_params['SubjectAlternativeNames'] = alternative_names
+        limiter.allow_request_aws_acm_request_certificate()
+        response = acm.request_certificate(**request_params)
 
-    # If there are alternative names, add them to the request parameters
-    if alternative_names:
-        request_params['SubjectAlternativeNames'] = alternative_names
+        certificate_arn = response['CertificateArn']
+        logger.info(
+            f"Created ACM certificate for: {domains} and got ARN: {certificate_arn}")
+        return certificate_arn
+    else:
+        logger.info(f"Found existing certificate that can be used: {existing_arn}")
+        return existing_arn
 
-    response = acm.request_certificate(**request_params)
+def find_certificate_by_domain(aws_resource_tags, domain, sans=None):
+    logger.info(f"Searching for existing certificate with tags: {aws_resource_tags}")
+    existing_acm_arns = glueops.aws.get_resource_arns_using_tags(
+        aws_resource_tags, ['acm:certificate'])
 
-    certificate_arn = response['CertificateArn']
-    logger.info(
-        f"Created ACM certificate for: {domains} and got ARN: {certificate_arn}")
-
-    return certificate_arn
-
+    for arn in existing_acm_arns:
+        response = describe_certificate(certificate_arn=arn)
+        cert_details = response.get('Certificate', {})
+        cert_domain = cert_details.get('DomainName')
+        cert_sans = cert_details.get('SubjectAlternativeNames', [])
+        cert_status = cert_details.get('Status')
+        if cert_status in [ 'PENDING_VALIDATION','ISSUED']:
+            if domain == cert_domain:
+                if sans:
+                    if all(san in cert_sans for san in sans):
+                        return arn
+                else:
+                    logger.info(f"Found existing certificate {arn} with tags: {aws_resource_tags}")
+                    return arn
+    logger.info(f"No usable certificates found with tags: {aws_resource_tags}")
+    return None
 
 def check_certificate_validation(certificate_arn):
     logger.info(f"Checking on ACM Certificate: {certificate_arn}")
-    acm = glueops.aws.create_aws_client('acm')
-    cert_details = acm.describe_certificate(
-        CertificateArn=certificate_arn)['Certificate']
+    cert_details =  describe_certificate(certificate_arn=certificate_arn)['Certificate']
     # Check for expiration
     if "NotAfter" in cert_details:
         expiration_date_naive = cert_details['NotAfter'].replace(tzinfo=None)
@@ -146,10 +189,7 @@ def delete_all_acm_certificates(aws_resource_tags):
 def get_domains_from_existing_certificate(certificate_arn):
     logger.info(
         f"Get domains from existing ACM certificate: {certificate_arn}")
-    acm = glueops.aws.create_aws_client('acm')
-    response = acm.describe_certificate(
-        CertificateArn=certificate_arn
-    )
+    response =  describe_certificate(certificate_arn=certificate_arn)
     domain_validations = response.get(
         'Certificate', {}).get('DomainValidationOptions', [])
     acm_domains = {validation.get('DomainName')
@@ -194,8 +234,7 @@ def get_cert_from_vault(secret_path):
 
 
 def get_serial_number(certificate_arn):
-    acm = glueops.aws.create_aws_client('acm')
-    certificate = acm.describe_certificate(CertificateArn=certificate_arn)
+    certificate = describe_certificate(certificate_arn=certificate_arn)
     return certificate['Certificate']['Serial']
 
 
@@ -226,3 +265,28 @@ def import_cert_to_acm(secret_path_in_vault, aws_resource_tags):
     )
 
     return response['CertificateArn']
+
+
+def describe_certificate(certificate_arn):
+    """Get the certificate details, with caching."""
+    # Try to get the cached data
+    
+    cached_data = redis_client.get(certificate_arn)
+    if cached_data:
+        logger.debug(f"Retrieved {certificate_arn} from cache")
+        data = pickle.loads(cached_data)
+        if data['Certificate']['Status'] != "PENDING_VALIDATION":
+            return data
+        else:
+            logger.debug(f"Refreshing cache for {certificate_arn} as it was PENDING_VALIDATION")
+    
+    # If not cached, fetch data from ACM
+    acm = glueops.aws.create_aws_client('acm')
+    limiter.allow_request_aws_acm_describe_certificate()
+    certificate_details = acm.describe_certificate(CertificateArn=certificate_arn)
+    
+    
+    # Cache the result with a TTL
+    redis_client.set(certificate_arn, pickle.dumps(certificate_details), ttl=CACHE_TTL)
+    logger.debug(f"Retrieved {certificate_arn} from ACM and cached with TTL: {CACHE_TTL}")
+    return certificate_details

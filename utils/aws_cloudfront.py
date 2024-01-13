@@ -2,9 +2,10 @@ from deepdiff import DeepDiff
 import glueops.aws
 import glueops.setup_logging
 import os
+import utils.aws_rate_limiter
 
 logger = glueops.setup_logging.configure(level=os.environ.get('LOG_LEVEL', 'WARNING'))
-
+limiter = utils.aws_rate_limiter.RateLimiterUtil(redis_url=os.environ.get('REDIS_CONNECTION_STRING', 'redis://glueops-operator-shared-redis.glueops-core-operators.svc.cluster.local:6379'))
 
 
 def get_distribution_id_from_arn(arn):
@@ -106,6 +107,7 @@ def get_live_distribution_config(distribution_id):
     logger.info(
         f"Getting current status of Distribution ID: {distribution_id}")
     client = glueops.aws.create_aws_client('cloudfront')
+    limiter.allow_request_aws_cloudfront_get_distribution_config()
     response = client.get_distribution_config(Id=distribution_id)
     return response
 
