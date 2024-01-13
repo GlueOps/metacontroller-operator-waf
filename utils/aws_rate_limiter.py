@@ -22,9 +22,9 @@ class RateLimiterUtil:
         self.aws_acm_request_certificate_limiter = self.create_limiter("ratelimit:aws:acm:requestcertificate", 5, Duration.SECOND)
         self.aws_acm_delete_certificate_limiter = self.create_limiter("ratelimit:aws:acm:deletecertificate", 5, Duration.SECOND)
         self.aws_cloudfront_get_distribution_config_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_get_distribution_config", 10, Duration.SECOND)
-        self.aws_cloudfront_delete_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_delete_distribution", 1, Duration.SECOND)
-        self.aws_cloudfront_create_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_create_distribution", 1, Duration.SECOND)
-        self.aws_cloudfront_update_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_update_distribution", 1, Duration.SECOND)
+        self.aws_cloudfront_delete_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_shared_for_POSTS", 1, Duration.SECOND)
+        self.aws_cloudfront_create_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_shared_for_POSTS", 1, Duration.SECOND)
+        self.aws_cloudfront_update_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_shared_for_POSTS", 1, Duration.SECOND)
         self.aws_cloudfront_get_distribution_limiter = self.create_limiter("ratelimit:aws:cloudfront:aws_cloudfront_get_distribution", 10, Duration.SECOND)
         
 
