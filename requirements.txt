@@ -1,5 +1,5 @@
 glueops-helpers @ https://github.com/GlueOps/python-glueops-helpers-library/archive/refs/tags/v0.4.1.zip
-fastapi==0.108.0
+fastapi==0.109.2
 uvicorn[standard]==0.25.0
 gunicorn==21.2.0
 deepdiff==6.7.1
