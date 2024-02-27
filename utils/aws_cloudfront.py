@@ -221,7 +221,7 @@ def create_distribution_config(domains, glueops_cluster_ingress_domain, acm_arn,
                 "Enabled": False,
                 "Quantity": 0
             },
-            "ViewerProtocolPolicy": "allow-all",
+            "ViewerProtocolPolicy": "redirect-to-https",
             "AllowedMethods": {
                 "Quantity": 7,
                 "Items": [
