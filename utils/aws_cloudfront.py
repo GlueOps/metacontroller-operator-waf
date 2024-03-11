@@ -288,7 +288,7 @@ def create_distribution_config(domains, glueops_cluster_ingress_domain, acm_arn,
             "CloudFrontDefaultCertificate": False,
             "ACMCertificateArn": acm_arn,
             "SSLSupportMethod": "sni-only",
-            "MinimumProtocolVersion": "TLSv1",
+            "MinimumProtocolVersion": "TLSv1.2_2021",
             "Certificate": acm_arn,
             "CertificateSource": "acm"
         },
