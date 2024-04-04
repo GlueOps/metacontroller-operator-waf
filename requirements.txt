@@ -4,4 +4,4 @@ uvicorn[standard]==0.29.0
 gunicorn==21.2.0
 deepdiff==6.7.1
 pyrate-limiter==3.6.0
-redis==5.0.1
+redis==5.0.3
