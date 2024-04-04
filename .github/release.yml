@@ -1,3 +1,7 @@
+####
+## This is managed via terraform. Any changes to this file may be overridden by our automation
+####
+
 changelog:
   exclude:
     labels:
@@ -14,7 +18,7 @@ changelog:
         - 'minor'
         - 'enhancement'
         - 'new-feature'
-    - title: Other 🐛🛠
+    - title: Other 🐛
       labels:
         - 'auto-update'
         - 'patch'
@@ -22,4 +26,5 @@ changelog:
         - 'bugfix'
         - 'bug'
         - 'hotfix'
-        - 'include-in-release'
+        - 'dependencies'
+        - 'include-in-release-notes'
