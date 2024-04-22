@@ -1,7 +1,7 @@
 glueops-helpers @ https://github.com/GlueOps/python-glueops-helpers-library/archive/refs/tags/v0.4.1.zip
 fastapi==0.110.2
 uvicorn[standard]==0.29.0
-gunicorn==21.2.0
+gunicorn==22.0.0
 deepdiff==6.7.1
 pyrate-limiter==3.6.0
 redis==5.0.3
