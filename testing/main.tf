@@ -4,7 +4,7 @@ import {
 }
 
 module "cdn" {
-  source                 = "git::https://github.com/cloudposse/terraform-aws-cloudfront-cdn?ref=1.1.0"
+  source                 = "git::https://github.com/cloudposse/terraform-aws-cloudfront-cdn?ref=v1.2.0"
   acm_certificate_arn    = "arn:aws:acm:us-east-1:604880673236:certificate/4c3de8b3-6529-4c45-826b-1766b79e1144" # update
   aliases                = ["16.aws-waf-testing.venkatamutyala.com"] # update
   origin_domain_name     = "" # update
