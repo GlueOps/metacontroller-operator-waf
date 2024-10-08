@@ -3,5 +3,5 @@ fastapi==0.111.1
 uvicorn[standard]==0.30.5
 gunicorn==22.0.0
 deepdiff==6.7.1
-pyrate-limiter==3.6.1
+pyrate-limiter==3.7.0
 redis==5.0.8
