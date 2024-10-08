@@ -1,4 +1,4 @@
-FROM python:3.11.9-alpine@sha256:700b4aa84090748aafb348fc042b5970abb0a73c8f1b4fcfe0f4e3c2a4a9fcca
+FROM python:3.11.10-alpine@sha256:004b4029670f2964bb102d076571c9d750c2a43b51c13c768e443c95a71aa9f3
 
 COPY . /app
 WORKDIR /app
