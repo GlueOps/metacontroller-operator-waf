@@ -2,6 +2,6 @@ glueops-helpers @ https://github.com/GlueOps/python-glueops-helpers-library/arch
 fastapi==0.111.1
 uvicorn[standard]==0.30.5
 gunicorn==22.0.0
-deepdiff==6.7.1
+deepdiff==7.0.1
 pyrate-limiter==3.6.1
 redis==5.0.8
